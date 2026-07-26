@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - Pi-hole Controller</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="#">Pi-hole Simplified Control</a>
+            <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <div class="row">
+            <!-- Recently Blocked Domains -->
+            <div class="col-md-8 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">Recent Domains</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-striped mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>&nbsp;</th>
+                                        <th>Domain</th>
+                                        <th>Client</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for q in queries %}
+                                    <tr class="mt-2 border-bottom">
+                                        <td title="{{ 'Allowed' if q.status != 'DENYLIST' else 'Blocked' }}">{{ '✔' if q.status != 'DENYLIST' else '✗' }}</td>
+                                        <td><code>{{ q.domain }}</code></td>
+                                        <td>{{ q.client }}</td>
+                                        <td>
+                                            {% if q.status != 'DENYLIST' %}
+                                            <form action="{{ url_for('block_domain') }}" method="POST" class="d-inline">
+                                                <input type="hidden" name="domain" value="{{ q.domain }}">
+                                                <input type="hidden" name="type" value="perm">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">Block</button>
+                                            </form>
+                                            {% else %}
+                                            <form action="{{ url_for('unblock_domain') }}" method="POST" class="d-inline">
+                                                <input type="hidden" name="domain" value="{{ q.domain }}">
+                                                <input type="hidden" name="type" value="temp">
+                                                <button type="submit" class="btn btn-sm btn-outline-warning">Temp Unblock</button>
+                                            </form>
+                                            <form action="{{ url_for('unblock_domain') }}" method="POST" class="d-inline">
+                                                <input type="hidden" name="domain" value="{{ q.domain }}">
+                                                <input type="hidden" name="type" value="perm">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">Perm Whitelist</button>
+                                            </form>                                            
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="4" class="text-center py-3">No blocked queries found.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preloaded Domain Lists Management -->
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">Block Lists Management</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <ul class="list-group list-group-flush">
+                            {% for lst in ad_lists %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span class="text-truncate" title="{{ lst.comment }}">{{ lst.comment | default('&nbsp;') }}</span>
+                                <!-- <span class="text-truncate" style="max-width: 150px;" title="{{ lst.address }}">{{ lst.address }}</span> -->
+                                <form action="{{ url_for('toggle_list') }}" method="POST">
+                                    <input type="hidden" name="list_id" value="{{ lst.id }}">
+                                    <!-- Toggle state logic -->
+                                    <input type="hidden" name="enable" value="{{ 'False' if lst.enabled else 'True' }}">
+                                    <button type="submit" class="btn btn-sm {{ 'btn-secondary' if lst.enabled else 'btn-primary' }}">
+                                        {{ 'Allow' if lst.enabled else 'Block from list' }}
+                                    </button>
+                                </form>
+                            </li>
+                            {% else %}
+                            <li class="list-group-item text-center py-3">No preloaded lists found.</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
