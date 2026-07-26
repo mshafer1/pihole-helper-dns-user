@@ -27,6 +27,7 @@ class ServerState:
     def __init__(self):
         self._lock = threading.Lock()
         self._queries = []
+        self._domains = {}
         self._lists = {}
         self._backend_session = None
 
@@ -39,20 +40,16 @@ class ServerState:
         with self._lock:
             return deepcopy(self._queries)
 
-    @queries.setter
-    def queries(self, queries):
+    @property
+    def domains(self):
         with self._lock:
-            self._queries = deepcopy(queries)
+            return deepcopy(self._domains)
 
     @property
     def lists(self):
         with self._lock:
             return deepcopy(self._lists)
 
-    @lists.setter
-    def lists(self, lists):
-        with self._lock:
-            self._lists = deepcopy(lists)
 
     def refresh_data(self):
         queries_response = self.pihole_api_request("/queries", params={}) or {}
@@ -71,21 +68,24 @@ class ServerState:
         lists_data = lists_response.get("lists", [])
         lists = {str(lst["id"]): lst for lst in lists_data} if lists_data else {}
 
+        domains = {}
+        domain_response = self.pihole_api_request("domains") or {}
+        if "domains" in domain_response:
+            for entry in domain_response["domains"]:
+                domains[entry.get("domain")] = {
+                    "enabled": entry.get("enabled"),
+                    "type": entry.get("type"),
+                }
+
         with self._lock:
             self._queries = deepcopy(queries)
             self._lists = deepcopy(lists)
-
-        return queries, lists
+            self._domains = deepcopy(domains)
 
     @property
     def backend_session(self):
         with self._lock:
             return self._backend_session
-
-    @backend_session.setter
-    def backend_session(self, backend_session):
-        with self._lock:
-            self._backend_session = backend_session
 
     def _validate_backend_session(self, backend_session):
         response = backend_session.get(f"http://{PIHOLE_HOST}/api/lists", timeout=5)
@@ -194,7 +194,7 @@ def login():
         if password == APP_PASSWORD:
             session["logged_in"] = True
             flash("Logged in successfully.", "success")
-            return redirect(url_for("dashboard"))
+            return redirect(url_for("home"))
         else:
             flash("Invalid password. Please try again.", "danger")
     return render_template("login.html")
@@ -208,7 +208,7 @@ def logout():
 
 
 @app.route("/")
-def dashboard():
+def home():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
 
@@ -231,7 +231,7 @@ def _handle_domain_change(domain, block: bool):
         # unblocking means allowing the domain, so we remove it from the deny list and add it to the allow list
         state.pihole_api_request(f"domains/allow/exact/{_quote_url(domain)}", method="PUT", json_data={"enabled": True})
         state.pihole_api_request(f"domains/deny/exact/{_quote_url(domain)}", method="DELETE", allowed_codes=(200, 204, 404), json_data={"enabled": False, "domain": domain})
-
+    state.refresh_data()  # Refresh the state after making changes
 
 @app.route("/block", methods=["POST"])
 def block_domain():
@@ -266,7 +266,7 @@ def block_domain():
             scheduler.remove_job(job_id)
 
         flash(f"Domain {domain} permanently blocked.", "success")
-    return redirect(url_for("dashboard"))
+    return redirect(url_for("home"))
 
 
 @app.route("/unblock", methods=["POST"])
@@ -303,7 +303,7 @@ def unblock_domain():
 
         flash(f"Domain {domain} permanently allowed.", "success")
 
-    return redirect(url_for("dashboard"))
+    return redirect(url_for("home"))
 
 
 @app.route("/toggle-list", methods=["POST"])
@@ -321,7 +321,7 @@ def toggle_list():
 
     if list_info is None:
         flash(f"List ID {list_id} not found.", "danger")
-        return redirect(url_for("dashboard"))
+        return redirect(url_for("home"))
     # print("editing list", list_info)
     state.pihole_api_request(
         f"lists/{_quote_url(list_info['address'])}",
@@ -336,7 +336,7 @@ def toggle_list():
     state.refresh_data()
 
     flash("Domain list status updated.", "success")
-    return redirect(url_for("dashboard"))
+    return redirect(url_for("home"))
 
 def _quote_url(url):
     return urllib.parse.quote(url, safe='')
