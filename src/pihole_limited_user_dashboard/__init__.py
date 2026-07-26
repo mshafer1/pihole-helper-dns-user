@@ -66,7 +66,7 @@ def pihole_session_refresh():
     _auth_session(s)  # Re-authenticate the session
 
 
-def pihole_api_request(endpoint, params=None, method="GET", json_data=None):
+def pihole_api_request(endpoint, params=None, method="GET", json_data=None, allowed_codes=tuple()):
     """Helper utility to communicate with Pi-hole legacy/standard HTTP API"""
     if params is None:
         params = {}
@@ -82,14 +82,17 @@ def pihole_api_request(endpoint, params=None, method="GET", json_data=None):
             response = s.put(url, params=params, json=json_data, timeout=5)
         else:
             response = s.get(url, params=params, timeout=5)
-        response.raise_for_status()
-        result = response.json()
-    except Exception as e:
+        if allowed_codes and response.status_code in allowed_codes:
+            result = response.json()
+        else:
+            response.raise_for_status()
+            result = response.json()
+    except requests.RequestException as e:
         print(
-            f"Pi-hole API request failed: {e} - {e.response.text if hasattr(e, 'response') else 'No response'}"
+            f"Pi-hole API request failed: {e} - {e.response if hasattr(e, 'response') else 'No response'}"
         )
         raise Exception(f"Pi-hole API communication error: {e}") from None
-    # print(f"Pi-hole API response: {result}")
+    print(f"Pi-hole API response: {result}")
     return result
 
 
@@ -146,15 +149,22 @@ def dashboard():
     lists_data = pihole_api_request("lists").get("lists", [])
     _lists.clear()  # Clear the global _lists variable
     _lists.update({str(lst["id"]): lst for lst in lists_data} if lists_data else {})
-    print("Lists data:", _lists)  # Debugging line to check the structure of ad_lists
+    # print("Lists data:", _lists)  # Debugging line to check the structure of ad_lists
 
     return render_template("index.html", queries=recent_queries[:20], ad_lists=lists_data)
 
 
 def _handle_domain_change(domain, block: bool):
     """Helper function to handle domain blocking/unblocking logic."""
-    pihole_api_request("domains/block/exact", params={"domain": domain, "enabled": block})
-    pihole_api_request("domains/allow/exact", params={"domain": domain, "enabled": not block})
+    if block:
+        pihole_api_request(f"domains/deny/exact/{_quote_url(domain)}", method="PUT", json_data={"enabled": True})
+        pihole_api_request(f"domains/allow/exact/{_quote_url(domain)}", method="PUT", allowed_codes=(200, 204, 404), json_data={"enabled": False})
+        pihole_api_request(f"domains/allow/exact/{_quote_url(domain)}", method="DELETE", allowed_codes=(200, 204, 404), json_data={"enabled": False, "domain": domain})
+    else:
+        # unblocking means allowing the domain, so we remove it from the deny list and add it to the allow list
+        pihole_api_request(f"domains/allow/exact/{_quote_url(domain)}", method="PUT", json_data={"enabled": True})
+        pihole_api_request(f"domains/deny/exact/{_quote_url(domain)}", method="PUT", allowed_codes=(200, 204, 404), json_data={"enabled": False})
+        pihole_api_request(f"domains/deny/exact/{_quote_url(domain)}", method="DELETE", allowed_codes=(200, 204, 404), json_data={"enabled": False, "domain": domain})
 
 
 @app.route("/block", methods=["POST"])
@@ -243,9 +253,9 @@ def toggle_list():
     except KeyError:
         flash(f"List ID {list_id} not found.", "danger")
         return redirect(url_for("dashboard"))
-    print("editing list", list_info)
+    # print("editing list", list_info)
     pihole_api_request(
-        f"lists/{urllib.parse.quote(list_info['address'], safe='')}",
+        f"lists/{_quote_url(list_info['address'])}",
         method="PUT",
         params={"type": "block"},
         json_data={
@@ -256,6 +266,9 @@ def toggle_list():
 
     flash("Domain list status updated.", "success")
     return redirect(url_for("dashboard"))
+
+def _quote_url(url):
+    return urllib.parse.quote(url, safe='')
 
 
 scheduler.add_job(
