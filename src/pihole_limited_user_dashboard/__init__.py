@@ -223,6 +223,7 @@ def home():
         "index.html",
         queries=state.queries[:20],
         ad_lists=list(state.lists.values()),
+        domains=state.domains,
     )
 
 
@@ -259,6 +260,7 @@ def block_domain():
 
     domain = request.form.get("domain")
     action_type = request.form.get("type")  # 'temp' or 'perm'
+    next_tab = request.form.get("next_tab", "queries")
 
     # Always remove from whitelist initially
     _handle_domain_change(domain, block=True)
@@ -285,7 +287,9 @@ def block_domain():
             scheduler.remove_job(job_id)
 
         flash(f"Domain {domain} permanently blocked.", "success")
-    return redirect(url_for("home"))
+    result = url_for("home", _anchor=next_tab)
+    print(f"Redirecting to {result}")
+    return redirect(result)
 
 
 @app.route("/unblock", methods=["POST"])
@@ -295,6 +299,7 @@ def unblock_domain():
 
     domain = request.form.get("domain")
     action_type = request.form.get("type")  # 'temp' or 'perm'
+    next_tab = request.form.get("next_tab", "queries")
 
     # Always whitelist the domain initially
     _handle_domain_change(domain, block=False)
@@ -322,8 +327,9 @@ def unblock_domain():
 
         flash(f"Domain {domain} permanently allowed.", "success")
 
-    return redirect(url_for("home"))
-
+    result = url_for("home", _anchor=next_tab)
+    print(f"Redirecting to {result}")
+    return redirect(result)
 
 @app.route("/toggle-list", methods=["POST"])
 def toggle_list():
@@ -340,7 +346,7 @@ def toggle_list():
 
     if list_info is None:
         flash(f"List ID {list_id} not found.", "danger")
-        return redirect(url_for("home"))
+        return redirect(url_for("home", anchor="lists"))
     # print("editing list", list_info)
     state.pihole_api_request(
         f"lists/{_quote_url(list_info['address'])}",
@@ -355,7 +361,9 @@ def toggle_list():
     state.refresh_data()
 
     flash("Domain list status updated.", "success")
-    return redirect(url_for("home"))
+    result = url_for("home", _anchor="lists")
+    print(f"Redirecting to {result}")
+    return redirect(result)
 
 
 def _quote_url(url):
