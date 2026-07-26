@@ -1,6 +1,7 @@
-import functools
+from copy import deepcopy
 import urllib.parse
 from datetime import datetime, timedelta
+import threading
 
 import requests
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -22,48 +23,120 @@ PIHOLE_HOST = config("PIHOLE_HOST")
 PIHOLE_TOKEN = config("PIHOLE_API_TOKEN")
 APP_PASSWORD = config("APP_PASSWORD")
 
-# global var, yuck
-_lists = {}
+class ServerState:
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._queries = []
+        self._lists = {}
+        self._backend_session = None
+
+    @property
+    def lock(self):
+        return self._lock
+
+    @property
+    def queries(self):
+        with self._lock:
+            return deepcopy(self._queries)
+
+    @queries.setter
+    def queries(self, queries):
+        with self._lock:
+            self._queries = deepcopy(queries)
+
+    @property
+    def lists(self):
+        with self._lock:
+            return deepcopy(self._lists)
+
+    @lists.setter
+    def lists(self, lists):
+        with self._lock:
+            self._lists = deepcopy(lists)
+
+    def refresh_data(self):
+        queries_response = pihole_api_request("/queries", params={}) or {}
+        queries = []
+        if "queries" in queries_response:
+            for entry in queries_response["queries"]:
+                queries.append(
+                    {
+                        "domain": entry.get("domain"),
+                        "client": entry.get("client"),
+                        "status": entry.get("status"),
+                    }
+                )
+
+        lists_response = pihole_api_request("lists") or {}
+        lists_data = lists_response.get("lists", [])
+        lists = {str(lst["id"]): lst for lst in lists_data} if lists_data else {}
+
+        with self._lock:
+            self._queries = deepcopy(queries)
+            self._lists = deepcopy(lists)
+
+        return queries, lists
+
+    @property
+    def backend_session(self):
+        with self._lock:
+            return self._backend_session
+
+    @backend_session.setter
+    def backend_session(self, backend_session):
+        with self._lock:
+            self._backend_session = backend_session
+
+    def _validate_backend_session(self, backend_session):
+        response = backend_session.get(f"http://{PIHOLE_HOST}/api/lists", timeout=5)
+        response.raise_for_status()
+        return response.json()
+
+    def _authenticate_backend_session(self, backend_session):
+        if "sid" in backend_session.headers:
+            print("have session, checking if still valid...")
+            try:
+                self._validate_backend_session(backend_session)
+                return backend_session
+            except Exception as e:
+                print(f"Session expired or invalid, re-authenticating: {e}")
+                backend_session.headers.pop("sid", None)
+
+        response = backend_session.post(f"http://{PIHOLE_HOST}/api/auth", json={"password": PIHOLE_TOKEN})
+        response.raise_for_status()
+        data = response.json()
+        sid = data.get("session", {}).get("sid")
+        if not sid:
+            raise Exception("Failed to retrieve session ID from Pi-hole API.")
+        print("logged in with backend")
+        backend_session.headers.update({"sid": sid})
+        return backend_session
+
+    def ensure_backend_session(self):
+        with self._lock:
+            if self._backend_session is None:
+                self._backend_session = requests.Session()
+
+            return self._authenticate_backend_session(self._backend_session)
+
+    def refresh_backend_session(self):
+        with self._lock:
+            if self._backend_session is None:
+                self._backend_session = requests.Session()
+
+            return self._authenticate_backend_session(self._backend_session)
+
+
+state = ServerState()
 
 # Initialize and start APScheduler
 scheduler = BackgroundScheduler()
 scheduler.start()
 
 
-def _auth_session(s: requests.Session):
-    """Authenticate the session with Pi-hole API and store the session ID in headers."""
-    if "sid" in s.headers:
-        print("have session, checking if still valid...")
-        # extend auth by doing an authenticated action
-        try:
-            pihole_api_request("lists")
-            return
-        except Exception as e:
-            print(f"Session expired or invalid, re-authenticating: {e}")
-            s.headers.pop("sid", None)  # Remove the old session ID
-
-    r = s.post(f"http://{PIHOLE_HOST}/api/auth", json={"password": PIHOLE_TOKEN})
-    r.raise_for_status()  # Raise an error if authentication fails
-    data = r.json()
-    sid = data.get("session", {}).get("sid")
-    if not sid:
-        raise Exception("Failed to retrieve session ID from Pi-hole API.")
-    print("logged in with backend")
-    s.headers.update({"sid": sid})  # Add the session ID to the session headers
-
-
-@functools.lru_cache(maxsize=1)
-def pihole_session():
-    """Return the current session object, cached for performance."""
-    s = requests.Session()
-    _auth_session(s)  # Authenticate the session
-    return s
-
-
 def pihole_session_refresh():
     """Refresh the Pi-hole session by clearing the cache and re-authenticating."""
-    s = pihole_session()  # Get the current session
-    _auth_session(s)  # Re-authenticate the session
+    state.refresh_backend_session()
 
 
 def pihole_api_request(endpoint, params=None, method="GET", json_data=None, allowed_codes=tuple()):
@@ -73,25 +146,32 @@ def pihole_api_request(endpoint, params=None, method="GET", json_data=None, allo
     endpoint = endpoint.lstrip("/")  # Ensure no leading slash
     url = f"http://{PIHOLE_HOST}/api/{endpoint}"
 
-    s = pihole_session()  # Use the cached session for requests
+    s = state.ensure_backend_session()  # Use the cached session for requests
     print(f"Pi-hole API request: {method} {url} with params {params} and json_data {json_data}")
-    try:
-        if method == "POST":
-            response = s.post(url, params=params, json=json_data, timeout=5)
-        elif method == "PUT":
-            response = s.put(url, params=params, json=json_data, timeout=5)
-        else:
-            response = s.get(url, params=params, timeout=5)
-        if allowed_codes and response.status_code in allowed_codes:
-            result = response.json()
-        else:
-            response.raise_for_status()
-            result = response.json()
-    except requests.RequestException as e:
-        print(
-            f"Pi-hole API request failed: {e} - {e.response if hasattr(e, 'response') else 'No response'}"
-        )
-        raise Exception(f"Pi-hole API communication error: {e}") from None
+    with state.lock:
+        try:
+            if method == "POST":
+                response = s.post(url, params=params, json=json_data, timeout=5)
+            elif method == "PUT":
+                response = s.put(url, params=params, json=json_data, timeout=5)
+            elif method == "DELETE":
+                response = s.delete(url, params=params, json=json_data, timeout=5)
+            else:
+                response = s.get(url, params=params, timeout=5)
+            if allowed_codes and response.status_code in allowed_codes:
+                print(f"Received allowed status code {response.status_code} for {url}")
+            else:
+                response.raise_for_status()
+            if response.text:
+                print("Got back:", response.text)
+                result = response.json()
+            else:
+                result = None
+        except requests.RequestException as e:
+            print(
+                f"Pi-hole API request failed: {e} - {e.response if hasattr(e, 'response') else 'No response'}"
+            )
+            raise Exception(f"Pi-hole API communication error: {e}")
     print(f"Pi-hole API response: {result}")
     return result
 
@@ -133,37 +213,24 @@ def dashboard():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
 
-    data = pihole_api_request("/queries", params={})
-    # data = []
-    recent_queries = []
-    if data and "queries" in data:
-        for entry in data["queries"]:
-            recent_queries.append(
-                {
-                    "domain": entry.get("domain"),
-                    "client": entry.get("client"),
-                    "status": entry.get("status"),
-                }
-            )
+    state.refresh_data()
+    # print("Lists data:", state.lists)  # Debugging line to check the structure of ad_lists
 
-    lists_data = pihole_api_request("lists").get("lists", [])
-    _lists.clear()  # Clear the global _lists variable
-    _lists.update({str(lst["id"]): lst for lst in lists_data} if lists_data else {})
-    # print("Lists data:", _lists)  # Debugging line to check the structure of ad_lists
-
-    return render_template("index.html", queries=recent_queries[:20], ad_lists=lists_data)
+    return render_template(
+        "index.html",
+        queries=state.queries[:20],
+        ad_lists=list(state.lists.values()),
+    )
 
 
 def _handle_domain_change(domain, block: bool):
     """Helper function to handle domain blocking/unblocking logic."""
     if block:
         pihole_api_request(f"domains/deny/exact/{_quote_url(domain)}", method="PUT", json_data={"enabled": True})
-        pihole_api_request(f"domains/allow/exact/{_quote_url(domain)}", method="PUT", allowed_codes=(200, 204, 404), json_data={"enabled": False})
         pihole_api_request(f"domains/allow/exact/{_quote_url(domain)}", method="DELETE", allowed_codes=(200, 204, 404), json_data={"enabled": False, "domain": domain})
     else:
         # unblocking means allowing the domain, so we remove it from the deny list and add it to the allow list
         pihole_api_request(f"domains/allow/exact/{_quote_url(domain)}", method="PUT", json_data={"enabled": True})
-        pihole_api_request(f"domains/deny/exact/{_quote_url(domain)}", method="PUT", allowed_codes=(200, 204, 404), json_data={"enabled": False})
         pihole_api_request(f"domains/deny/exact/{_quote_url(domain)}", method="DELETE", allowed_codes=(200, 204, 404), json_data={"enabled": False, "domain": domain})
 
 
@@ -248,9 +315,12 @@ def toggle_list():
     list_id = request.form.get("list_id")
     enable_state = request.form.get("enable")
 
-    try:
-        list_info = _lists[list_id]
-    except KeyError:
+    list_info = state.lists.get(list_id)
+    if list_info is None:
+        state.refresh_data()
+        list_info = state.lists.get(list_id)
+
+    if list_info is None:
         flash(f"List ID {list_id} not found.", "danger")
         return redirect(url_for("dashboard"))
     # print("editing list", list_info)
@@ -263,6 +333,8 @@ def toggle_list():
             "comment": list_info.get("comment", ""),
         },
     )
+
+    state.refresh_data()
 
     flash("Domain list status updated.", "success")
     return redirect(url_for("dashboard"))
