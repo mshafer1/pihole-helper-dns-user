@@ -1,7 +1,7 @@
-from copy import deepcopy
-import urllib.parse
-from datetime import datetime, timedelta
 import threading
+import urllib.parse
+from copy import deepcopy
+from datetime import datetime, timedelta
 
 import requests
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -22,6 +22,7 @@ Session(app)
 PIHOLE_HOST = config("PIHOLE_HOST")
 PIHOLE_TOKEN = config("PIHOLE_API_TOKEN")
 APP_PASSWORD = config("APP_PASSWORD")
+
 
 class ServerState:
     def __init__(self):
@@ -49,7 +50,6 @@ class ServerState:
     def lists(self):
         with self._lock:
             return deepcopy(self._lists)
-
 
     def refresh_data(self):
         queries_response = self.pihole_api_request("/queries", params={}) or {}
@@ -102,7 +102,9 @@ class ServerState:
                 print(f"Session expired or invalid, re-authenticating: {e}")
                 backend_session.headers.pop("sid", None)
 
-        response = backend_session.post(f"http://{PIHOLE_HOST}/api/auth", json={"password": PIHOLE_TOKEN})
+        response = backend_session.post(
+            f"http://{PIHOLE_HOST}/api/auth", json={"password": PIHOLE_TOKEN}
+        )
         response.raise_for_status()
         data = response.json()
         sid = data.get("session", {}).get("sid")
@@ -126,7 +128,9 @@ class ServerState:
 
             return self._authenticate_backend_session(self._backend_session)
 
-    def pihole_api_request(self, endpoint, params=None, method="GET", json_data=None, allowed_codes=tuple()):
+    def pihole_api_request(
+        self, endpoint, params=None, method="GET", json_data=None, allowed_codes=tuple()
+    ):
         """Helper utility to communicate with Pi-hole legacy/standard HTTP API"""
         if params is None:
             params = {}
@@ -225,13 +229,28 @@ def home():
 def _handle_domain_change(domain, block: bool):
     """Helper function to handle domain blocking/unblocking logic."""
     if block:
-        state.pihole_api_request(f"domains/deny/exact/{_quote_url(domain)}", method="PUT", json_data={"enabled": True})
-        state.pihole_api_request(f"domains/allow/exact/{_quote_url(domain)}", method="DELETE", allowed_codes=(200, 204, 404), json_data={"enabled": False, "domain": domain})
+        state.pihole_api_request(
+            f"domains/deny/exact/{_quote_url(domain)}", method="PUT", json_data={"enabled": True}
+        )
+        state.pihole_api_request(
+            f"domains/allow/exact/{_quote_url(domain)}",
+            method="DELETE",
+            allowed_codes=(200, 204, 404),
+            json_data={"enabled": False, "domain": domain},
+        )
     else:
         # unblocking means allowing the domain, so we remove it from the deny list and add it to the allow list
-        state.pihole_api_request(f"domains/allow/exact/{_quote_url(domain)}", method="PUT", json_data={"enabled": True})
-        state.pihole_api_request(f"domains/deny/exact/{_quote_url(domain)}", method="DELETE", allowed_codes=(200, 204, 404), json_data={"enabled": False, "domain": domain})
+        state.pihole_api_request(
+            f"domains/allow/exact/{_quote_url(domain)}", method="PUT", json_data={"enabled": True}
+        )
+        state.pihole_api_request(
+            f"domains/deny/exact/{_quote_url(domain)}",
+            method="DELETE",
+            allowed_codes=(200, 204, 404),
+            json_data={"enabled": False, "domain": domain},
+        )
     state.refresh_data()  # Refresh the state after making changes
+
 
 @app.route("/block", methods=["POST"])
 def block_domain():
@@ -338,8 +357,9 @@ def toggle_list():
     flash("Domain list status updated.", "success")
     return redirect(url_for("home"))
 
+
 def _quote_url(url):
-    return urllib.parse.quote(url, safe='')
+    return urllib.parse.quote(url, safe="")
 
 
 scheduler.add_job(
