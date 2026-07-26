@@ -55,7 +55,7 @@ class ServerState:
             self._lists = deepcopy(lists)
 
     def refresh_data(self):
-        queries_response = pihole_api_request("/queries", params={}) or {}
+        queries_response = self.pihole_api_request("/queries", params={}) or {}
         queries = []
         if "queries" in queries_response:
             for entry in queries_response["queries"]:
@@ -67,7 +67,7 @@ class ServerState:
                     }
                 )
 
-        lists_response = pihole_api_request("lists") or {}
+        lists_response = self.pihole_api_request("lists") or {}
         lists_data = lists_response.get("lists", [])
         lists = {str(lst["id"]): lst for lst in lists_data} if lists_data else {}
 
@@ -126,6 +126,42 @@ class ServerState:
 
             return self._authenticate_backend_session(self._backend_session)
 
+    def pihole_api_request(self, endpoint, params=None, method="GET", json_data=None, allowed_codes=tuple()):
+        """Helper utility to communicate with Pi-hole legacy/standard HTTP API"""
+        if params is None:
+            params = {}
+        endpoint = endpoint.lstrip("/")  # Ensure no leading slash
+        url = f"http://{PIHOLE_HOST}/api/{endpoint}"
+
+        s = self.ensure_backend_session()  # Use the cached session for requests
+        print(f"Pi-hole API request: {method} {url} with params {params} and json_data {json_data}")
+        with self.lock:
+            try:
+                if method == "POST":
+                    response = s.post(url, params=params, json=json_data, timeout=5)
+                elif method == "PUT":
+                    response = s.put(url, params=params, json=json_data, timeout=5)
+                elif method == "DELETE":
+                    response = s.delete(url, params=params, json=json_data, timeout=5)
+                else:
+                    response = s.get(url, params=params, timeout=5)
+                if allowed_codes and response.status_code in allowed_codes:
+                    print(f"Received allowed status code {response.status_code} for {url}")
+                else:
+                    response.raise_for_status()
+                if response.text:
+                    print("Got back:", response.text)
+                    result = response.json()
+                else:
+                    result = None
+            except requests.RequestException as e:
+                print(
+                    f"Pi-hole API request failed: {e} - {e.response if hasattr(e, 'response') else 'No response'}"
+                )
+                raise Exception(f"Pi-hole API communication error: {e}")
+        print(f"Pi-hole API response: {result}")
+        return result
+
 
 state = ServerState()
 
@@ -137,43 +173,6 @@ scheduler.start()
 def pihole_session_refresh():
     """Refresh the Pi-hole session by clearing the cache and re-authenticating."""
     state.refresh_backend_session()
-
-
-def pihole_api_request(endpoint, params=None, method="GET", json_data=None, allowed_codes=tuple()):
-    """Helper utility to communicate with Pi-hole legacy/standard HTTP API"""
-    if params is None:
-        params = {}
-    endpoint = endpoint.lstrip("/")  # Ensure no leading slash
-    url = f"http://{PIHOLE_HOST}/api/{endpoint}"
-
-    s = state.ensure_backend_session()  # Use the cached session for requests
-    print(f"Pi-hole API request: {method} {url} with params {params} and json_data {json_data}")
-    with state.lock:
-        try:
-            if method == "POST":
-                response = s.post(url, params=params, json=json_data, timeout=5)
-            elif method == "PUT":
-                response = s.put(url, params=params, json=json_data, timeout=5)
-            elif method == "DELETE":
-                response = s.delete(url, params=params, json=json_data, timeout=5)
-            else:
-                response = s.get(url, params=params, timeout=5)
-            if allowed_codes and response.status_code in allowed_codes:
-                print(f"Received allowed status code {response.status_code} for {url}")
-            else:
-                response.raise_for_status()
-            if response.text:
-                print("Got back:", response.text)
-                result = response.json()
-            else:
-                result = None
-        except requests.RequestException as e:
-            print(
-                f"Pi-hole API request failed: {e} - {e.response if hasattr(e, 'response') else 'No response'}"
-            )
-            raise Exception(f"Pi-hole API communication error: {e}")
-    print(f"Pi-hole API response: {result}")
-    return result
 
 
 def reblock_domain(domain):
@@ -226,12 +225,12 @@ def dashboard():
 def _handle_domain_change(domain, block: bool):
     """Helper function to handle domain blocking/unblocking logic."""
     if block:
-        pihole_api_request(f"domains/deny/exact/{_quote_url(domain)}", method="PUT", json_data={"enabled": True})
-        pihole_api_request(f"domains/allow/exact/{_quote_url(domain)}", method="DELETE", allowed_codes=(200, 204, 404), json_data={"enabled": False, "domain": domain})
+        state.pihole_api_request(f"domains/deny/exact/{_quote_url(domain)}", method="PUT", json_data={"enabled": True})
+        state.pihole_api_request(f"domains/allow/exact/{_quote_url(domain)}", method="DELETE", allowed_codes=(200, 204, 404), json_data={"enabled": False, "domain": domain})
     else:
         # unblocking means allowing the domain, so we remove it from the deny list and add it to the allow list
-        pihole_api_request(f"domains/allow/exact/{_quote_url(domain)}", method="PUT", json_data={"enabled": True})
-        pihole_api_request(f"domains/deny/exact/{_quote_url(domain)}", method="DELETE", allowed_codes=(200, 204, 404), json_data={"enabled": False, "domain": domain})
+        state.pihole_api_request(f"domains/allow/exact/{_quote_url(domain)}", method="PUT", json_data={"enabled": True})
+        state.pihole_api_request(f"domains/deny/exact/{_quote_url(domain)}", method="DELETE", allowed_codes=(200, 204, 404), json_data={"enabled": False, "domain": domain})
 
 
 @app.route("/block", methods=["POST"])
@@ -324,7 +323,7 @@ def toggle_list():
         flash(f"List ID {list_id} not found.", "danger")
         return redirect(url_for("dashboard"))
     # print("editing list", list_info)
-    pihole_api_request(
+    state.pihole_api_request(
         f"lists/{_quote_url(list_info['address'])}",
         method="PUT",
         params={"type": "block"},
