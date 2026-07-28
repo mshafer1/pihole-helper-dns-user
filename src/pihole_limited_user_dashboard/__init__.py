@@ -25,6 +25,7 @@ APP_PASSWORD = config("APP_PASSWORD")
 
 DEBUG = config("DEBUG", default=False, cast=bool)
 
+
 class ServerState:
     def __init__(self):
         self._lock = threading.Lock()
@@ -59,15 +60,25 @@ class ServerState:
                 {"domain": "example.com", "client": "127.0.0.1", "status": "allowed"},
             ]
             self._lists = {
-                "1": {"id": 1, "address": "https://example.com/list1.txt", "enabled": True, "comment": "Example list 1"},
-                "2": {"id": 2, "address": "https://example.com/list2.txt", "enabled": False, "comment": "Example list 2"},
+                "1": {
+                    "id": 1,
+                    "address": "https://example.com/list1.txt",
+                    "enabled": True,
+                    "comment": "Example list 1",
+                },
+                "2": {
+                    "id": 2,
+                    "address": "https://example.com/list2.txt",
+                    "enabled": False,
+                    "comment": "Example list 2",
+                },
             }
             self._domains = {
                 "example.com": {"enabled": True, "type": "allow"},
                 "blocked.com": {"enabled": False, "type": "deny"},
             }
             return
-        
+
         queries_response = self.pihole_api_request("/queries", params={}) or {}
         queries = []
         if "queries" in queries_response:
@@ -251,7 +262,9 @@ def _handle_domain_change(domain, block: bool):
     """Helper function to handle domain blocking/unblocking logic."""
     if block:
         state.pihole_api_request(
-            f"domains/deny/exact/{_quote_url(domain)}", method="PUT", json_data={"enabled": True}
+            f"domains/deny/exact/{_quote_url(domain)}",
+            method="PUT",
+            json_data={"enabled": True},
         )
         state.pihole_api_request(
             f"domains/allow/exact/{_quote_url(domain)}",
@@ -262,7 +275,9 @@ def _handle_domain_change(domain, block: bool):
     else:
         # unblocking means allowing the domain, so we remove it from the deny list and add it to the allow list
         state.pihole_api_request(
-            f"domains/allow/exact/{_quote_url(domain)}", method="PUT", json_data={"enabled": True}
+            f"domains/allow/exact/{_quote_url(domain)}",
+            method="PUT",
+            json_data={"enabled": True},
         )
         state.pihole_api_request(
             f"domains/deny/exact/{_quote_url(domain)}",

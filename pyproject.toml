@@ -34,6 +34,29 @@ ni-python-styleguide = "^0.5.1"
 mypy = "^2.3.0"
 
 
+[tool.poetry.group.security.dependencies]
+bandit = "^1.9.4"
+pip-audit = "^2.10.1"
+pre-commit = "^4.6.0"
+
+[tool.poetry.group.tools.dependencies]
+poethepoet = "^0.46.0"
+
+
+[tool.poe.tasks]
+format = "poetry run ni-python-styleguide format"
+lint = "poetry run ni-python-styleguide lint"
+_export_reqs = "poetry export -o requirements.txt"
+_pip_audit = "poetry run pip-audit -r requirements.txt"
+_cleanup_reqs = "rm -f requirements.txt"
+pip-audit = ["_export_reqs", "_pip_audit", "_cleanup_reqs"]
+snyk = "snyk code test"
+bandit = "poetry run bandit -r src/pihole_limited_user_dashboard"
+lock-check = "poetry check --lock"
+# things that can't run on all machines specifically excluded
+all = ["format", "lint", "lock-check"]
+security = ["pip-audit", "bandit"]
+
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
