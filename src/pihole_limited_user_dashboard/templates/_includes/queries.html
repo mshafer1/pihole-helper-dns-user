@@ -1,0 +1,66 @@
+<div class="p-3 border-bottom bg-body-tertiary">
+    <div class="row g-2">
+        <div class="col-md-12">
+            <input
+                type="search"
+                class="form-control form-control-sm"
+                data-fuzzy-search="queries"
+                placeholder="Search..."
+                aria-label="Search recent queries"
+            >
+        </div>
+    </div>
+</div>
+<div class="table-responsive">
+    <table class="table table-striped mb-0 table-dark">
+        <thead>
+            <tr>
+                <th>&nbsp;</th>
+                <th>Domain</th>
+                <th>Client</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for q in queries %}
+            <tr
+                class="mt-2 border-bottom"
+                data-fuzzy-row="queries"
+                data-fuzzy-primary="{{ q.domain }}"
+                data-fuzzy-searchable="{{ q.domain }} {{ q.client }} {{ q.status }}"
+            >
+                <td title="{{ 'Allowed' if q.status != 'DENYLIST' else 'Blocked' }}">{{ '✔' if q.status != 'DENYLIST' else '✗' }}</td>
+                <td><code>{{ q.domain }}</code></td>
+                <td>{{ q.client }}</td>
+                <td>
+                    {% if q.status != 'DENYLIST' %}
+                    <form action="{{ url_for('block_domain') }}" method="POST" class="d-inline tab-aware-form">
+                        <input type="hidden" name="domain" value="{{ q.domain }}">
+                        <input type="hidden" name="type" value="perm">
+                        <input type="hidden" name="next_tab" value="queries">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Block</button>
+                    </form>
+                    {% else %}
+                    <form action="{{ url_for('unblock_domain') }}" method="POST" class="d-inline tab-aware-form">
+                        <input type="hidden" name="domain" value="{{ q.domain }}">
+                        <input type="hidden" name="type" value="temp">
+                        <input type="hidden" name="next_tab" value="queries">
+                        <button type="submit" class="btn btn-sm btn-outline-warning">Temp Unblock</button>
+                    </form>
+                    <form action="{{ url_for('unblock_domain') }}" method="POST" class="d-inline tab-aware-form">
+                        <input type="hidden" name="domain" value="{{ q.domain }}">
+                        <input type="hidden" name="type" value="perm">
+                        <input type="hidden" name="next_tab" value="queries">
+                        <button type="submit" class="btn btn-sm btn-outline-success">Mark Allowed</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" class="text-center py-3">No recent queries found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

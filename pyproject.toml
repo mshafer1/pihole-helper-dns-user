@@ -12,7 +12,7 @@ packages = [
 
 [tool.poetry.scripts]
 # todo: rename
-run-server = "pihole_limited_user_dashboard.__main__:run"
+server = "pihole_limited_user_dashboard.__main__:run"
 
 [tool.poetry.dependencies]
 flask = "^3.1.3"

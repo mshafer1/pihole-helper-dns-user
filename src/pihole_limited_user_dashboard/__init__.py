@@ -23,6 +23,7 @@ PIHOLE_HOST = config("PIHOLE_HOST")
 PIHOLE_TOKEN = config("PIHOLE_API_TOKEN")
 APP_PASSWORD = config("APP_PASSWORD")
 
+DEBUG = config("DEBUG", default=False, cast=bool)
 
 class ServerState:
     def __init__(self):
@@ -52,6 +53,21 @@ class ServerState:
             return deepcopy(self._lists)
 
     def refresh_data(self):
+        if DEBUG:
+            print("Refreshing fake data...")
+            self._queries = [
+                {"domain": "example.com", "client": "127.0.0.1", "status": "allowed"},
+            ]
+            self._lists = {
+                "1": {"id": 1, "address": "https://example.com/list1.txt", "enabled": True, "comment": "Example list 1"},
+                "2": {"id": 2, "address": "https://example.com/list2.txt", "enabled": False, "comment": "Example list 2"},
+            }
+            self._domains = {
+                "example.com": {"enabled": True, "type": "allow"},
+                "blocked.com": {"enabled": False, "type": "deny"},
+            }
+            return
+        
         queries_response = self.pihole_api_request("/queries", params={}) or {}
         queries = []
         if "queries" in queries_response:
@@ -92,7 +108,11 @@ class ServerState:
         response.raise_for_status()
         return response.json()
 
-    def _authenticate_backend_session(self, backend_session):
+    def _authenticate_backend_session(self, backend_session: requests.Session):
+        if DEBUG:
+            print("Authenticating backend session...")
+            backend_session.headers.update({"sid": "dummy_sid_for_debugging"})
+            return
         if "sid" in backend_session.headers:
             print("have session, checking if still valid...")
             try:
@@ -213,7 +233,7 @@ def logout():
 
 @app.route("/")
 def home():
-    if not session.get("logged_in"):
+    if not session.get("logged_in") and not DEBUG:
         return redirect(url_for("login"))
 
     state.refresh_data()
@@ -255,12 +275,11 @@ def _handle_domain_change(domain, block: bool):
 
 @app.route("/block", methods=["POST"])
 def block_domain():
-    if not session.get("logged_in"):
+    if not session.get("logged_in") and not DEBUG:
         return redirect(url_for("login"))
 
     domain = request.form.get("domain")
     action_type = request.form.get("type")  # 'temp' or 'perm'
-    next_tab = request.form.get("next_tab", "queries")
 
     # Always remove from whitelist initially
     _handle_domain_change(domain, block=True)
@@ -287,14 +306,14 @@ def block_domain():
             scheduler.remove_job(job_id)
 
         flash(f"Domain {domain} permanently blocked.", "success")
-    result = url_for("home", _anchor=next_tab)
+    result = url_for("home", _anchor="domains")
     print(f"Redirecting to {result}")
     return redirect(result)
 
 
 @app.route("/unblock", methods=["POST"])
 def unblock_domain():
-    if not session.get("logged_in"):
+    if not session.get("logged_in") and not DEBUG:
         return redirect(url_for("login"))
 
     domain = request.form.get("domain")
@@ -327,13 +346,14 @@ def unblock_domain():
 
         flash(f"Domain {domain} permanently allowed.", "success")
 
-    result = url_for("home", _anchor=next_tab)
+    result = url_for("home", _anchor="domains")
     print(f"Redirecting to {result}")
     return redirect(result)
 
+
 @app.route("/toggle-list", methods=["POST"])
 def toggle_list():
-    if not session.get("logged_in"):
+    if not session.get("logged_in") and not DEBUG:
         return redirect(url_for("login"))
 
     list_id = request.form.get("list_id")
@@ -346,7 +366,7 @@ def toggle_list():
 
     if list_info is None:
         flash(f"List ID {list_id} not found.", "danger")
-        return redirect(url_for("home", anchor="lists"))
+        return redirect(url_for("home", _anchor="lists"))
     # print("editing list", list_info)
     state.pihole_api_request(
         f"lists/{_quote_url(list_info['address'])}",
