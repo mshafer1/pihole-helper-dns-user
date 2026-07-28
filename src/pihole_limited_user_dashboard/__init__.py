@@ -1,33 +1,43 @@
+"""Provide a limited user interface for managing a Pi-hole instance.
+
+Allows:
+    - Viewing recent queries
+    - Blocking and unblocking domains from queries (temporarily or permanently)
+    - Viewing and toggling domain lists (enable/disable)
+    - Viewing and managing blocked/allowed domains
+"""
+
+import copy
+import datetime
 import threading
 import urllib.parse
-from copy import deepcopy
-from datetime import datetime, timedelta
 
+import apscheduler.schedulers.background
+import cachelib
+import decouple
+import flask
+import flask_session
 import requests
-from apscheduler.schedulers.background import BackgroundScheduler
-from cachelib import SimpleCache
-from decouple import config
-from flask import flash, Flask, redirect, render_template, request, session, url_for
-from flask_session import Session
 
-app = Flask(__name__)
+app = flask.Flask(__name__)
 
 # Configure Flask-Session
-app.config["SECRET_KEY"] = config("SECRET_KEY")
+app.config["SECRET_KEY"] = decouple.config("SECRET_KEY")
 app.config["SESSION_TYPE"] = "cachelib"
-app.config["SESSION_CACHELIB"] = SimpleCache()
-Session(app)
+app.config["SESSION_CACHELIB"] = cachelib.SimpleCache()
+flask_session.Session(app)
 
 # Load Pi-hole settings from environment
-PIHOLE_HOST = config("PIHOLE_HOST")
-PIHOLE_TOKEN = config("PIHOLE_API_TOKEN")
-APP_PASSWORD = config("APP_PASSWORD")
+PIHOLE_HOST = decouple.config("PIHOLE_HOST")
+PIHOLE_TOKEN = decouple.config("PIHOLE_API_TOKEN")
+APP_PASSWORD = decouple.config("APP_PASSWORD")
 
-DEBUG = config("DEBUG", default=False, cast=bool)
+DEBUG = decouple.config("DEBUG", default=False, cast=bool)
 
 
-class ServerState:
+class _ServerState:
     def __init__(self):
+        """Initialize the server state."""
         self._lock = threading.Lock()
         self._queries = []
         self._domains = {}
@@ -35,25 +45,25 @@ class ServerState:
         self._backend_session = None
 
     @property
-    def lock(self):
-        return self._lock
-
-    @property
     def queries(self):
+        """Return a copy of the recent queries."""
         with self._lock:
-            return deepcopy(self._queries)
+            return copy.deepcopy(self._queries)
 
     @property
     def domains(self):
+        """Return a copy of the managed domains."""
         with self._lock:
-            return deepcopy(self._domains)
+            return copy.deepcopy(self._domains)
 
     @property
     def lists(self):
+        """Return a copy of the domain lists."""
         with self._lock:
-            return deepcopy(self._lists)
+            return copy.deepcopy(self._lists)
 
     def refresh_data(self):
+        """Refresh the server state by fetching data from the Pi-hole API."""
         if DEBUG:
             print("Refreshing fake data...")
             self._queries = [
@@ -105,14 +115,9 @@ class ServerState:
                 }
 
         with self._lock:
-            self._queries = deepcopy(queries)
-            self._lists = deepcopy(lists)
-            self._domains = deepcopy(domains)
-
-    @property
-    def backend_session(self):
-        with self._lock:
-            return self._backend_session
+            self._queries = copy.deepcopy(queries)
+            self._lists = copy.deepcopy(lists)
+            self._domains = copy.deepcopy(domains)
 
     def _validate_backend_session(self, backend_session):
         response = backend_session.get(f"http://{PIHOLE_HOST}/api/lists", timeout=5)
@@ -145,7 +150,7 @@ class ServerState:
         backend_session.headers.update({"sid": sid})
         return backend_session
 
-    def ensure_backend_session(self):
+    def _ensure_backend_session(self):
         with self._lock:
             if self._backend_session is None:
                 self._backend_session = requests.Session()
@@ -162,15 +167,15 @@ class ServerState:
     def pihole_api_request(
         self, endpoint, params=None, method="GET", json_data=None, allowed_codes=tuple()
     ):
-        """Helper utility to communicate with Pi-hole legacy/standard HTTP API"""
+        """Communicate with Pi-hole standard HTTP API."""
         if params is None:
             params = {}
         endpoint = endpoint.lstrip("/")  # Ensure no leading slash
         url = f"http://{PIHOLE_HOST}/api/{endpoint}"
 
-        s = self.ensure_backend_session()  # Use the cached session for requests
+        s = self._ensure_backend_session()  # Use the cached session for requests
         print(f"Pi-hole API request: {method} {url} with params {params} and json_data {json_data}")
-        with self.lock:
+        with self._lock:
             try:
                 if method == "POST":
                     response = s.post(url, params=params, json=json_data, timeout=5)
@@ -198,10 +203,10 @@ class ServerState:
         return result
 
 
-state = ServerState()
+state = _ServerState()
 
 # Initialize and start APScheduler
-scheduler = BackgroundScheduler()
+scheduler = apscheduler.schedulers.background.BackgroundScheduler()
 scheduler.start()
 
 
@@ -211,46 +216,53 @@ def pihole_session_refresh():
 
 
 def reblock_domain(domain):
-    """Background task executed by APScheduler to re-add domain to blocklist / remove from whitelist"""
+    """Background scheduled task for re-blocking a domain after temporary unblocking."""
     _handle_domain_change(domain, block=True)
     print(f"APScheduler: Domain {domain} has been automatically re-blocked.")
 
 
 def reunblock_domain(domain):
-    """Background task executed by APScheduler to re-add domain to allowlist / remove from blocklist"""
+    """Background scheduled task for re-allowing a domain after temporary blocking."""
     _handle_domain_change(domain, block=False)
     print(f"APScheduler: Domain {domain} has been automatically re-allowed.")
 
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    if request.method == "POST":
-        password = request.form.get("password")
+    """Handle user login.
+
+    If the request method is POST, validate the password and set the session.
+    If GET, render the login page.
+    """
+    if flask.request.method == "POST":
+        password = flask.request.form.get("password")
         if password == APP_PASSWORD:
-            session["logged_in"] = True
-            flash("Logged in successfully.", "success")
-            return redirect(url_for("home"))
+            flask.session["logged_in"] = True
+            flask.flash("Logged in successfully.", "success")
+            return flask.redirect(flask.url_for("home"))
         else:
-            flash("Invalid password. Please try again.", "danger")
-    return render_template("login.html")
+            flask.flash("Invalid password. Please try again.", "danger")
+    return flask.render_template("login.html")
 
 
 @app.route("/logout")
 def logout():
-    session.clear()
-    flash("Logged out successfully.", "info")
-    return redirect(url_for("login"))
+    """Handle user logout by clearing the session and redirecting to the login page."""
+    flask.session.clear()
+    flask.flash("Logged out successfully.", "info")
+    return flask.redirect(flask.url_for("login"))
 
 
 @app.route("/")
 def home():
-    if not session.get("logged_in") and not DEBUG:
-        return redirect(url_for("login"))
+    """Render the main dashboard page."""
+    if not flask.session.get("logged_in") and not DEBUG:
+        return flask.redirect(flask.url_for("login"))
 
     state.refresh_data()
     # print("Lists data:", state.lists)  # Debugging line to check the structure of ad_lists
 
-    return render_template(
+    return flask.render_template(
         "index.html",
         queries=state.queries[:20],
         ad_lists=list(state.lists.values()),
@@ -273,7 +285,8 @@ def _handle_domain_change(domain, block: bool):
             json_data={"enabled": False, "domain": domain},
         )
     else:
-        # unblocking means allowing the domain, so we remove it from the deny list and add it to the allow list
+        # unblocking means allowing the domain,
+        # so we remove it from the deny list and add it to the allow list
         state.pihole_api_request(
             f"domains/allow/exact/{_quote_url(domain)}",
             method="PUT",
@@ -290,18 +303,19 @@ def _handle_domain_change(domain, block: bool):
 
 @app.route("/block", methods=["POST"])
 def block_domain():
-    if not session.get("logged_in") and not DEBUG:
-        return redirect(url_for("login"))
+    """Handle request to block a given domain."""
+    if not flask.session.get("logged_in") and not DEBUG:
+        return flask.redirect(flask.url_for("login"))
 
-    domain = request.form.get("domain")
-    action_type = request.form.get("type")  # 'temp' or 'perm'
+    domain = flask.request.form.get("domain")
+    action_type = flask.request.form.get("type")  # 'temp' or 'perm'
 
     # Always remove from whitelist initially
     _handle_domain_change(domain, block=True)
 
     if action_type == "temp":
         # Calculate run time (e.g., 5 minutes from now)
-        run_time = datetime.now() + timedelta(minutes=5)
+        run_time = datetime.datetime.now() + datetime.timedelta(minutes=5)
 
         # Schedule the reblock task dynamically
         # Giving the job a unique ID prevents duplicate overlapping schedules for the same domain
@@ -313,34 +327,34 @@ def block_domain():
             id=f"reunblock_{domain}",
             replace_existing=True,
         )
-        flash(f"Domain {domain} temporarily blocked for 5 minutes.", "success")
+        flask.flash(f"Domain {domain} temporarily blocked for 5 minutes.", "success")
     else:
         # If it was previously scheduled for a temp unblock, remove the job if switched to permanent
         job_id = f"reunblock_{domain}"
         if scheduler.get_job(job_id):
             scheduler.remove_job(job_id)
 
-        flash(f"Domain {domain} permanently blocked.", "success")
-    result = url_for("home", _anchor="domains")
+        flask.flash(f"Domain {domain} permanently blocked.", "success")
+    result = flask.url_for("home", _anchor="domains")
     print(f"Redirecting to {result}")
-    return redirect(result)
+    return flask.redirect(result)
 
 
 @app.route("/unblock", methods=["POST"])
 def unblock_domain():
-    if not session.get("logged_in") and not DEBUG:
-        return redirect(url_for("login"))
+    """Handle request to unblock a given domain."""
+    if not flask.session.get("logged_in") and not DEBUG:
+        return flask.redirect(flask.url_for("login"))
 
-    domain = request.form.get("domain")
-    action_type = request.form.get("type")  # 'temp' or 'perm'
-    next_tab = request.form.get("next_tab", "queries")
+    domain = flask.request.form.get("domain")
+    action_type = flask.request.form.get("type")  # 'temp' or 'perm'
 
     # Always whitelist the domain initially
     _handle_domain_change(domain, block=False)
 
     if action_type == "temp":
         # Calculate run time (e.g., 5 minutes from now)
-        run_time = datetime.now() + timedelta(minutes=5)
+        run_time = datetime.datetime.now() + datetime.timedelta(minutes=5)
 
         # Schedule the reblock task dynamically
         # Giving the job a unique ID prevents duplicate overlapping schedules for the same domain
@@ -352,27 +366,28 @@ def unblock_domain():
             id=f"reblock_{domain}",
             replace_existing=True,
         )
-        flash(f"Domain {domain} temporarily unblocked for 5 minutes.", "success")
+        flask.flash(f"Domain {domain} temporarily unblocked for 5 minutes.", "success")
     else:
         # If it was previously scheduled for a temp unblock, remove the job if switched to permanent
         job_id = f"reblock_{domain}"
         if scheduler.get_job(job_id):
             scheduler.remove_job(job_id)
 
-        flash(f"Domain {domain} permanently allowed.", "success")
+        flask.flash(f"Domain {domain} permanently allowed.", "success")
 
-    result = url_for("home", _anchor="domains")
+    result = flask.url_for("home", _anchor="domains")
     print(f"Redirecting to {result}")
-    return redirect(result)
+    return flask.redirect(result)
 
 
 @app.route("/toggle-list", methods=["POST"])
 def toggle_list():
-    if not session.get("logged_in") and not DEBUG:
-        return redirect(url_for("login"))
+    """Handle request to enable or disable a domain list."""
+    if not flask.session.get("logged_in") and not DEBUG:
+        return flask.redirect(flask.url_for("login"))
 
-    list_id = request.form.get("list_id")
-    enable_state = request.form.get("enable")
+    list_id = flask.request.form.get("list_id")
+    enable_state = flask.request.form.get("enable")
 
     list_info = state.lists.get(list_id)
     if list_info is None:
@@ -380,8 +395,8 @@ def toggle_list():
         list_info = state.lists.get(list_id)
 
     if list_info is None:
-        flash(f"List ID {list_id} not found.", "danger")
-        return redirect(url_for("home", _anchor="lists"))
+        flask.flash(f"List ID {list_id} not found.", "danger")
+        return flask.redirect(flask.url_for("home", _anchor="lists"))
     # print("editing list", list_info)
     state.pihole_api_request(
         f"lists/{_quote_url(list_info['address'])}",
@@ -395,10 +410,10 @@ def toggle_list():
 
     state.refresh_data()
 
-    flash("Domain list status updated.", "success")
-    result = url_for("home", _anchor="lists")
+    flask.flash("Domain list status updated.", "success")
+    result = flask.url_for("home", _anchor="lists")
     print(f"Redirecting to {result}")
-    return redirect(result)
+    return flask.redirect(result)
 
 
 def _quote_url(url):

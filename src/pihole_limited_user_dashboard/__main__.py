@@ -1,5 +1,7 @@
+"""Use gevent to serve the Flask app for the Pi-hole limited user dashboard."""
+
 import decouple
-from gevent.pywsgi import WSGIServer
+import gevent.pywsgi
 
 import pihole_limited_user_dashboard
 
@@ -8,7 +10,10 @@ SERVER_PORT: int = decouple.config("SERVER_PORT", default=5000, cast=int)
 
 
 def run():
-    http_server = WSGIServer((SERVER_HOST, SERVER_PORT), pihole_limited_user_dashboard.app)
+    """Run the Flask app using gevent WSGI server."""
+    http_server = gevent.pywsgi.WSGIServer(
+        (SERVER_HOST, SERVER_PORT), pihole_limited_user_dashboard.app
+    )
     http_server.serve_forever()
 
 

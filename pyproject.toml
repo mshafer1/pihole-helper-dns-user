@@ -10,8 +10,7 @@ packages = [
     {include = "pihole_limited_user_dashboard", from="src"}
 ]
 
-[tool.poetry.scripts]
-# todo: rename
+[project.scripts]
 server = "pihole_limited_user_dashboard.__main__:run"
 
 [tool.poetry.dependencies]
@@ -54,8 +53,8 @@ snyk = "snyk code test"
 bandit = "poetry run bandit -r src/pihole_limited_user_dashboard"
 lock-check = "poetry check --lock"
 # things that can't run on all machines specifically excluded
-all = ["format", "lint", "lock-check"]
 security = ["pip-audit", "bandit"]
+all = ["format", "lint", "lock-check", "security"]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
