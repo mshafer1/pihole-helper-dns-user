@@ -20,4 +20,29 @@ and choosing whether to use block lists or not.
 
 ## How to deploy
 
-TODO
+Since this is intended to be run as a docker container running next to pihole, a docker compose stack seems logical.
+
+Steps:
+
+1. Generate the api token:
+
+```bash
+echo -n "your_secure_api_token_here" | sha256sum
+```
+
+1. Copy `.env.example` and customize
+
+```bash
+cp .env.example .env
+```
+
+Edit the file (see comments for what to set each to.)
+
+1. Use the provided boot script and docker-compose file
+
+```bash
+cd hosting
+bash launch_pihole.sh
+```
+
+The Pihole admin interface will be available at `http://pihole.net:4080/admin` (if using the pihole as dns, otherwise, `http://<IP address>:4080/admin`). And the limited control panel will be available at `http://pihole.net` (or, `http://<IP address>`).

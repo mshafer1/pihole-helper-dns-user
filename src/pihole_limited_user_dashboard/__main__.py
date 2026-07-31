@@ -11,6 +11,7 @@ SERVER_PORT: int = decouple.config("SERVER_PORT", default=5000, cast=int)
 
 def run():
     """Run the Flask app using gevent WSGI server."""
+    print(f"Serving app on interface {SERVER_HOST} (port {SERVER_PORT})")
     http_server = gevent.pywsgi.WSGIServer(
         (SERVER_HOST, SERVER_PORT), pihole_limited_user_dashboard.app
     )

@@ -1,0 +1,54 @@
+networks:
+  internal:
+    driver: macvlan
+    internal: true
+    # no/default parent
+    ipam:
+      config:
+        - subnet: "172.17.0.0/24"
+          ip_range: "172.17.0.0/24"
+          # no gateway
+  external:
+    driver: bridge
+
+services:
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    # For DNS to function flawlessly, bind to specific host interfaces or use host networking
+    ports:
+      - "0.0.0.0:53:53/tcp"
+      - "0.0.0.0:53:53/udp"
+      - "0.0.0.0:4080:80/tcp" # (admin) Web interface and API port. Moving off of port 80
+    env_file:
+      # - .env
+      - _env_pihole
+    networks:
+      external:
+      internal:
+        ipv4_address: 172.17.0.2 # Specify IP so the sidecar knows where to find it
+    environment:
+      - TZ=America/Chicago
+      # Optional: expected to be set in _env_pihole file
+      # - FTLCONF_webserver_api_password=${PIHOLE_WEB_PASSWORD:-}
+
+      # Optional: Define upstream DNS providers (e.g., Cloudflare)
+      - FTLCONF_dns_upstreams=1.1.1.1;1.0.0.1
+    volumes:
+      - './etc-pihole:/etc/pihole'
+    restart: unless-stopped
+  limited-user-sidecar:
+    container_name: sidecar
+    image: ghcr.io/mshafer1/pihole_limited_user_sidecar:latest
+    ports:
+        - "0.0.0.0:80:5000/tcp" # uses 5000 by default
+    environment:
+        - TZ=America/Chicago
+        - PIHOLE_HOST=172.17.0.2:80
+    env_file:
+        # - .env
+        - _env_sidecar
+    networks:
+      external:
+      internal:
+        ipv4_address: 172.17.0.4 # Specify IP to force a valid IP in the right range
