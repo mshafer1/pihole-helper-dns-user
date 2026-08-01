@@ -183,7 +183,6 @@ class _ServerState:
         url = f"http://{PIHOLE_HOST}/api/{endpoint}"
 
         s = self._ensure_backend_session()  # Use the cached session for requests
-        print(f"Pi-hole API request: {method} {url} with params {params} and json_data {json_data}")
         with self._lock:
             try:
                 if method == "POST":
@@ -208,7 +207,6 @@ class _ServerState:
                     f"Pi-hole API request failed: {e} - {e.response if hasattr(e, 'response') else 'No response'}"
                 )
                 raise Exception(f"Pi-hole API communication error: {e}")
-        print(f"Pi-hole API response: {result}")
         return result
 
 
