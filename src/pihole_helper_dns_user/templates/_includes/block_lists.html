@@ -21,6 +21,7 @@
     >
         <span class="text-truncate" title="{{ lst.comment }}">{{ lst.comment | default('&nbsp;') }}</span>
         <form action="{{ url_for('toggle_list') }}" method="POST" class="tab-aware-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="list_id" value="{{ lst.id }}">
             <input type="hidden" name="enable" value="{{ 'False' if lst.enabled else 'True' }}">
             <input type="hidden" name="next_tab" value="lists">

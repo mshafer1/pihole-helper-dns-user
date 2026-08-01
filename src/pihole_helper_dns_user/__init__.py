@@ -19,6 +19,7 @@ import decouple
 import flask
 import flask_cors
 import flask_session
+from flask_wtf.csrf import CSRFProtect
 import requests
 
 app = flask.Flask(__name__)
@@ -29,6 +30,7 @@ app.config["SESSION_TYPE"] = "cachelib"
 app.config["SESSION_CACHELIB"] = cachelib.SimpleCache()
 flask_session.Session(app)
 flask_cors.CORS(app)
+csrf = CSRFProtect(app)
 
 # Load Pi-hole settings from environment
 PIHOLE_HOST = decouple.config("PIHOLE_HOST")
@@ -131,7 +133,7 @@ class _ServerState:
         if DEBUG:
             print("Authenticating backend session...")
             backend_session.headers.update({"sid": "dummy_sid_for_debugging"})
-            return
+            return backend_session
         if "sid" in backend_session.headers:
             print("have session, checking if still valid...")
             try:

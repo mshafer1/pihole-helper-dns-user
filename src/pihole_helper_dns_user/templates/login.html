@@ -8,6 +8,7 @@
 <body class="bg-body d-flex align-items-center py-4" style="height: 100vh;">
     <main class="form-signin w-100 m-auto" style="max-width: 330px; padding: 15px;">
         <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <h1 class="h3 mb-3 fw-normal text-center">Pi-hole Control</h1>
 
             {% with messages = get_flashed_messages(with_categories=true) %}

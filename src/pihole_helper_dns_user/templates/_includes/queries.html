@@ -35,6 +35,7 @@
                 <td>
                     {% if q.status != 'DENYLIST' %}
                     <form action="{{ url_for('block_domain') }}" method="POST" class="d-inline tab-aware-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="domain" value="{{ q.domain }}">
                         <input type="hidden" name="type" value="perm">
                         <input type="hidden" name="next_tab" value="queries">
@@ -42,12 +43,14 @@
                     </form>
                     {% else %}
                     <form action="{{ url_for('unblock_domain') }}" method="POST" class="d-inline tab-aware-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="domain" value="{{ q.domain }}">
                         <input type="hidden" name="type" value="temp">
                         <input type="hidden" name="next_tab" value="queries">
                         <button type="submit" class="btn btn-sm btn-outline-warning">Temp Unblock</button>
                     </form>
                     <form action="{{ url_for('unblock_domain') }}" method="POST" class="d-inline tab-aware-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="domain" value="{{ q.domain }}">
                         <input type="hidden" name="type" value="perm">
                         <input type="hidden" name="next_tab" value="queries">

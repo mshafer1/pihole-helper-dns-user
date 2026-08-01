@@ -39,6 +39,7 @@
                 <td>
                     {% if v.type == 'deny' %}
                     <form action="{{ url_for('unblock_domain') }}" method="POST" class="d-inline tab-aware-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="domain" value="{{ domain }}">
                         <input type="hidden" name="type" value="perm">
                         <input type="hidden" name="next_tab" value="domains">
@@ -46,6 +47,7 @@
                     </form>
                     {% else %}
                     <form action="{{ url_for('block_domain') }}" method="POST" class="d-inline tab-aware-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="domain" value="{{ domain }}">
                         <input type="hidden" name="type" value="perm">
                         <input type="hidden" name="next_tab" value="domains">
