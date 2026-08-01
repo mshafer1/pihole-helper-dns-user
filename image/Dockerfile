@@ -45,13 +45,13 @@ COPY ./pyproject.toml ./poetry.lock ./README.md ./
 
 RUN python3 -m pip install -e .
 
+RUN install -d -o 1000 -g 1000 660 /var/log/pihole-helper-dns-user
+
 # set the user to non-root
 USER 1000:1000
 
 # running inside a container, the server will listen on all interfaces, not just localhost
 ENV SERVER_HOST=0.0.0.0
-
-RUN mkdir -p /var/log/pihole-helper-dns-user
 
 WORKDIR /var/log/pihole-helper-dns-user
 
