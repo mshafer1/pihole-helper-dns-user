@@ -45,7 +45,7 @@ COPY ./pyproject.toml ./poetry.lock ./README.md ./
 
 RUN python3 -m pip install -e .
 
-RUN install -d -o 1000 -g 1000 660 /var/log/pihole-helper-dns-user
+RUN install -d -o 1000 -g 1000 -m 770 /var/log/pihole-helper-dns-user
 
 # set the user to non-root
 USER 1000:1000
