@@ -20,29 +20,68 @@ and choosing whether to use block lists or not.
 
 ## How to deploy
 
+<div style="border: 1px dashed;">
+⚠️ Docs are currently written against Pi-hole Version 6. A different version of Pi-hole will likely not work with the API as is, and be different to setup ⚠️
+</div>
+
+&nbsp;
+
 Since this is intended to be run as a docker container running next to pihole, a docker compose stack seems logical.
+
+
+<details open><summary>Option 1: launcher script with pihole and side car together in same stack</summary>
+
+&nbsp;
 
 Steps:
 
-1. Generate the api token:
-
-```bash
-echo -n "your_secure_api_token_here" | sha256sum
-```
-
 1. Copy `.env.example` and customize
 
-```bash
-cp .env.example .env
-```
+    ```bash
+    cp .env.example ./hosting/.env
+    ```
 
-Edit the file (see comments for what to set each to.)
+    Edit the file (see comments for what to set each value to.)
 
 1. Use the provided boot script and docker-compose file
 
-```bash
-cd hosting
-bash launch_pihole.sh
-```
+    ```bash
+    cd hosting
+    bash launch_pihole.sh
+    ```
 
-The Pihole admin interface will be available at `http://pihole.net:4080/admin` (if using the pihole as dns, otherwise, `http://<IP address>:4080/admin`). And the limited control panel will be available at `http://pihole.net` (or, `http://<IP address>`).
+    The Pihole admin interface will be available at `http://pihole.net:4080/admin` (if using the pihole as dns, otherwise, `http://<IP address>:4080/admin`). And the limited control panel will be available at `http://pihole.net` (or, `http://<IP address>`).
+
+</details>
+
+<details>
+<summary>Option 2: With pihole on another host</summary>
+
+&nbsp;
+
+Steps:
+
+1. Copy `.env.example` and customize
+
+    ```bash
+    cp .env.example ./hosting/.env
+    ```
+
+    Edit the file (see comments for what to set each value to.)
+
+    NOTE: in this mode, PIHOLE_HOST needs to be set such that the api is available at `http://${PIHOLE_HOST}/api`
+
+1. Get an api token from the web UI
+
+    - Go to `Settings` -> `Web Interface / API`
+    - Click "Configure app password"
+    - Copy the new app password, and click the button to apply it.
+
+1. Store the app password in `./hosting/_env_sidecar` as the `FTLCONF_webserver_api_password` value
+
+1. Bring up just the side car
+
+    `cd image`
+    `docker compose up -d pihole-helper-dns-user`
+
+<details>
