@@ -143,7 +143,10 @@
                                     Lists</a>
                             </li>
                             <li class="nav-item fw-bold ms-lg-auto mb-2 px-4">
-                                <a href="{{ url_for('logout') }}" class="mt-2 btn btn-outline-light btn-sm">Logout</a>
+                                <form action="{{ url_for('logout') }}" method="POST">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="mt-2 btn btn-outline-light btn-sm">Logout</button>
+                                </form>
                             </li>
                         </ul>
                     </div>

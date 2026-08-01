@@ -252,9 +252,11 @@ def login():
     return flask.render_template("login.html")
 
 
-@app.route("/logout")
+@app.route("/logout", methods=["POST"])
 def logout():
     """Handle user logout by clearing the session and redirecting to the login page."""
+    if not flask.session.get("logged_in") and not DEBUG:
+        return flask.redirect(flask.url_for("login"))
     flask.session.clear()
     flask.flash("Logged out successfully.", "info")
     return flask.redirect(flask.url_for("login"))
