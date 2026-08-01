@@ -16,6 +16,7 @@ import apscheduler.schedulers.background
 import cachelib
 import decouple
 import flask
+import flask_cors
 import flask_session
 import requests
 
@@ -26,6 +27,7 @@ app.config["SECRET_KEY"] = decouple.config("SECRET_KEY")
 app.config["SESSION_TYPE"] = "cachelib"
 app.config["SESSION_CACHELIB"] = cachelib.SimpleCache()
 flask_session.Session(app)
+flask_cors.CORS(app)
 
 # Load Pi-hole settings from environment
 PIHOLE_HOST = decouple.config("PIHOLE_HOST")
