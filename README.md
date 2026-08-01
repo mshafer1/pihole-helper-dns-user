@@ -1,4 +1,4 @@
-# Pi-hole Limited User Side Car
+# Pi-hole Helper - DNS User
 
 ## Why?
 

@@ -51,8 +51,8 @@ USER 1000:1000
 # running inside a container, the server will listen on all interfaces, not just localhost
 ENV SERVER_HOST=0.0.0.0
 
-RUN mkdir -p /var/log/pihole-limited-user-dashboard
+RUN mkdir -p /var/log/pihole-helper-dns-user
 
-WORKDIR /var/log/pihole-limited-user-dashboard
+WORKDIR /var/log/pihole-helper-dns-user
 
 CMD ["server"]

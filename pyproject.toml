@@ -1,5 +1,5 @@
 [project]
-name = "pihole-limited-user_dashboard"
+name = "pihole-helper-dns-user"
 version = "0.1.0"
 description = "A flask-based web server for a limited-user admin to control a pihole install"
 license = "MIT"
@@ -7,11 +7,11 @@ readme = "README.md"
 requires-python = ">=3.11,<4"
 dynamic=["dependencies"]
 packages = [
-    {include = "pihole_limited_user_dashboard", from="src"}
+    {include = "pihole_helper_dns_user", from="src"}
 ]
 
 [project.scripts]
-server = "pihole_limited_user_dashboard.__main__:run"
+server = "pihole_helper_dns_user.__main__:run"
 
 [tool.poetry.dependencies]
 flask = "^3.1.3"
@@ -50,7 +50,7 @@ _pip_audit = "poetry run pip-audit -r requirements.txt"
 _cleanup_reqs = "rm -f requirements.txt"
 pip-audit = ["_export_reqs", "_pip_audit", "_cleanup_reqs"]
 snyk = "snyk code test"
-bandit = "poetry run bandit -r src/pihole_limited_user_dashboard"
+bandit = "poetry run bandit -r src/pihole_helper_dns_user"
 lock-check = "poetry check --lock"
 # things that can't run on all machines specifically excluded
 security = ["pip-audit", "bandit"]
