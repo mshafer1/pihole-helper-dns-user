@@ -37,10 +37,12 @@ jobs:
 
       - name: Build Docker image
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        env:
+          IMAGE_TAG: ${{ steps.meta.outputs.version }}
         with:
           context: .
           file: ./image/Dockerfile
-          tags: ${IMAGE_NAME}:${{ steps.meta.outputs.version }}
+          tags: ${IMAGE_NAME}:${IMAGE_TAG}
           outputs: type=docker,dest=/tmp/${IMAGE_NAME}-image.tar
 
       - name: Upload image tarball
@@ -80,8 +82,9 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Tag and Push to Registry
+        env:
+          IMAGE_TAG: ${{ steps.meta.outputs.version }}
         run: |
-          IMAGE_TAG="${{ steps.meta.outputs.version }}"
           REGISTRY_IMAGE="ghcr.io/${IMAGE_NAME}:${IMAGE_TAG}"
 
           # Tag the locally loaded image for the remote destination
