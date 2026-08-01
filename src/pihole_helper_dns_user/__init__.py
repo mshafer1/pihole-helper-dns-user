@@ -320,6 +320,9 @@ def block_domain():
 
     domain = flask.request.form.get("domain")
     action_type = flask.request.form.get("type")  # 'temp' or 'perm'
+    if not domain or action_type not in {"temp", "perm"}:
+        flask.flash("Invalid request parameters.", "danger")
+        return flask.redirect(flask.url_for("home", _anchor="domains"))
 
     # Always remove from whitelist initially
     _handle_domain_change(domain, block=True)
@@ -359,6 +362,10 @@ def unblock_domain():
 
     domain = flask.request.form.get("domain")
     action_type = flask.request.form.get("type")  # 'temp' or 'perm'
+
+    if not domain or action_type not in {"temp", "perm"}:
+        flask.flash("Invalid request parameters.", "danger")
+        return flask.redirect(flask.url_for("home", _anchor="domains"))
 
     # Always whitelist the domain initially
     _handle_domain_change(domain, block=False)
