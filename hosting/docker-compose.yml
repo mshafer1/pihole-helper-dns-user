@@ -37,9 +37,9 @@ services:
     volumes:
       - './etc-pihole:/etc/pihole'
     restart: unless-stopped
-  piHoleHelper-DNSUser:
+  pihole-helper-dns-user:
     container_name: sidecar
-    image: ghcr.io/mshafer1/PiHoleHelper-DNSUser:latest
+    image: ghcr.io/mshafer1/pihole-helper-dns-user:latest
     ports:
         - "0.0.0.0:80:5000/tcp" # uses 5000 by default
     environment:
