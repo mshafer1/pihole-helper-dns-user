@@ -28,6 +28,12 @@ RUN pip wheel -w /wheels -r requirements.txt
 
 FROM python:3.14.5-alpine3.23@sha256:5a824eb82cc75361f98611f3cfc5091ea33f10a6ccea4d4ebdabbc523b9a1614 AS app
 
+RUN apk update && apk add --no-cache curl
+
+COPY ./image/health-check.sh /usr/local/bin/health-check.sh
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 CMD /usr/local/bin/health-check.sh
+
 COPY --from=COMPILE_LAYER /wheels /wheels
 RUN python3 -m pip install --no-index --find-links=/wheels /wheels/*.whl
 
@@ -38,6 +44,9 @@ COPY ./src /app/
 COPY ./pyproject.toml ./poetry.lock ./README.md ./
 
 RUN python3 -m pip install -e .
+
+# set the user to non-root
+USER 1000:1000
 
 # running inside a container, the server will listen on all interfaces, not just localhost
 ENV SERVER_HOST=0.0.0.0

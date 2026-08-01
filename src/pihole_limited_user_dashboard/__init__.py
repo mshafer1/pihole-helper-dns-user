@@ -270,6 +270,17 @@ def home():
     )
 
 
+@app.route("/api/health")
+def api_health():
+    """Health check endpoint to verify the API is responsive."""
+    try:
+        state.refresh_backend_session()
+    except Exception as e:
+        print(f"Health check failed: {e}")
+        return flask.jsonify({"status": "unhealthy", "error": str(e)}), 500
+    return flask.jsonify({"status": "healthy"}), 200
+
+
 def _handle_domain_change(domain, block: bool):
     """Helper function to handle domain blocking/unblocking logic."""
     if block:
