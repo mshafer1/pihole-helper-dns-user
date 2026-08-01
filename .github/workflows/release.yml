@@ -85,7 +85,7 @@ jobs:
 
       - name: Tag and Push to Registry
         env:
-          IMAGE_TAG: ${{ steps.meta.outputs.version }}
+          IMAGE_TAG: ${{ needs.build-image.outputs.image-tag }}
         run: |
           REGISTRY_IMAGE="ghcr.io/${IMAGE_NAME}:${IMAGE_TAG}"
 
