@@ -407,6 +407,10 @@ def toggle_list():
     list_id = flask.request.form.get("list_id")
     enable_state = flask.request.form.get("enable")
 
+    if not list_id or enable_state not in {"True", "False"}:
+        flask.flash("Invalid request parameters.", "danger")
+        return flask.redirect(flask.url_for("home", _anchor="lists"))
+
     list_info = state.lists.get(list_id)
     if list_info is None:
         state.refresh_data()
