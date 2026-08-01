@@ -198,7 +198,6 @@ class _ServerState:
                 else:
                     response.raise_for_status()
                 if response.text:
-                    print("Got back:", response.text)
                     result = response.json()
                 else:
                     result = None

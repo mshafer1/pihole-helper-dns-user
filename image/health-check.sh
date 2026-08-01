@@ -3,6 +3,6 @@
 set -e
 
 curl -sSf http://localhost:5000/api/health > /dev/null 2>&1 || {
-    echo "Pi-hole API is not healthy. Please check the Pi-hole container."
+    echo "Service is not healthy. Please check the dns-user sidecar."
     exit 1
 }

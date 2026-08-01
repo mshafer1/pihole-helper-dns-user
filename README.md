@@ -58,7 +58,7 @@ Steps:
 
 </details>
 
-</details>
+<details>
 <summary>Option 2: With pihole on another host</summary>
 
 &nbsp;
@@ -90,4 +90,4 @@ Steps:
     `cd image`
     `docker compose up -d pihole-helper-dns-user`
 
-<details>
+</details>
