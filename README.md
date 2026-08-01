@@ -35,13 +35,17 @@ Since this is intended to be run as a docker container running next to pihole, a
 
 Steps:
 
-1. Copy `.env.example` and customize
+1. Split `.env.example` into two files and customize
 
     ```bash
-    cp .env.example ./hosting/.env
+    touch ./hosting/_env_pihole ./hosting/_env_sidecar
     ```
 
-    Edit the file (see comments for what to set each value to.)
+    Copy the `pihole settings` section into `./hosting/_env_pihole`.
+
+    Copy the `sidecar settings` section into `./hosting/_env_sidecar`.
+
+    The comments in `.env.example` indicate which vars belong in each file.
 
 1. Use the provided boot script and docker-compose file
 
@@ -54,20 +58,22 @@ Steps:
 
 </details>
 
-<details>
+</details>
 <summary>Option 2: With pihole on another host</summary>
 
 &nbsp;
 
 Steps:
 
-1. Copy `.env.example` and customize
+1. Split `.env.example` into two files and customize
 
     ```bash
-    cp .env.example ./hosting/.env
+    touch ./hosting/_env_pihole ./hosting/_env_sidecar
     ```
 
-    Edit the file (see comments for what to set each value to.)
+    Copy the `pihole settings` section into `./hosting/_env_pihole`.
+
+    Copy the `sidecar settings` section into `./hosting/_env_sidecar`.
 
     NOTE: in this mode, PIHOLE_HOST needs to be set such that the api is available at `http://${PIHOLE_HOST}/api`
 
@@ -77,7 +83,7 @@ Steps:
     - Click "Configure app password"
     - Copy the new app password, and click the button to apply it.
 
-1. Store the app password in `./hosting/_env_sidecar` as the `FTLCONF_webserver_api_password` value
+1. Store the app password in `./hosting/_env_sidecar` as the `PIHOLE_API_TOKEN` value
 
 1. Bring up just the side car
 
