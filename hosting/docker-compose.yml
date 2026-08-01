@@ -41,7 +41,7 @@ services:
     container_name: sidecar
     image: ghcr.io/mshafer1/pihole-helper-dns-user:latest
     ports:
-        - "0.0.0.0:80:5000/tcp" # uses 5000 by default
+        - "0.0.0.0:${SIDECAR_PORT:-80}:5000/tcp" # uses 5000 by default
     environment:
         - TZ=America/Chicago
         - PIHOLE_HOST=172.17.0.2:80
