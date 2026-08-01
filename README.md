@@ -87,8 +87,8 @@ Steps:
 
 1. Bring up just the side car
 
-    `cd hosting`
+    - `cd hosting`
 
-    `docker compose up -d pihole-helper-dns-user`
+    - `docker compose up -d pihole-helper-dns-user`
 
 </details>
