@@ -1,0 +1,62 @@
+[project]
+name = "pihole-helper-dns-user"
+version = "0.1.0"
+description = "A flask-based web server for a limited-user admin to control a pihole install"
+license = "MIT"
+readme = "README.md"
+requires-python = ">=3.11,<4"
+dynamic=["dependencies"]
+packages = [
+    {include = "pihole_helper_dns_user", from="src"}
+]
+
+[project.scripts]
+server = "pihole_helper_dns_user.__main__:run"
+
+[tool.poetry.dependencies]
+flask = "^3.1.3"
+flask-cors = "^6.0.5"
+flask-session = "^0.8.0"
+flask-wtf = "^1.3.0"
+cachelib = "^0.14.0"
+python-decouple = "^3.8"
+requests = "^2.34.2"
+apscheduler = "^3.11.3"
+gevent = {version="^26.5.0", platform="linux"}
+
+[tool.poetry.group.test.dependencies]
+pytest = "^9.1.1"
+pytest-snapshot = "^0.9.0"
+pytest-mock = "^3.15.1"
+
+[tool.poetry.group.lint.dependencies]
+ni-python-styleguide = "^0.5.1"
+mypy = "^2.3.0"
+
+
+[tool.poetry.group.security.dependencies]
+bandit = "^1.9.4"
+pip-audit = "^2.10.1"
+pre-commit = "^4.6.0"
+
+[tool.poetry.group.tools.dependencies]
+poethepoet = "^0.46.0"
+
+
+[tool.poe.tasks]
+format = "poetry run ni-python-styleguide format"
+lint = "poetry run ni-python-styleguide lint"
+_export_reqs = "poetry export -o requirements.txt"
+_pip_audit = "poetry run pip-audit -r requirements.txt"
+_cleanup_reqs = "rm -f requirements.txt"
+pip-audit = ["_export_reqs", "_pip_audit", "_cleanup_reqs"]
+snyk = "snyk code test"
+bandit = "poetry run bandit -r src/pihole_helper_dns_user"
+lock-check = "poetry check --lock"
+# things that can't run on all machines specifically excluded
+security = ["pip-audit", "bandit"]
+all = ["format", "lint", "lock-check", "security"]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

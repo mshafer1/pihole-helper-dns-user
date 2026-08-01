@@ -1,0 +1,28 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+  - repo: https://github.com/psf/black
+    rev: 25.12.0
+    hooks:
+      - id: black
+        args: ["-l", "100", "--check", "--diff"]
+  - repo: local
+    hooks:
+      - id: linux-only-docker-scan-secrets
+        name: Use docker to scan Git for secrets (Linux only)
+        entry: >-
+          bash -c '[[ "$(uname)" == "Linux" ]] || exit 0;
+          docker run
+          -e GIT_CONFIG_COUNT=1
+          -e GIT_CONFIG_KEY_0="safe.directory"
+          -e GIT_CONFIG_VALUE_0="/src"
+          --rm
+          -v $(pwd):/src
+          ghcr.io/betterleaks/betterleaks:latest
+          git /src'
+        language: system
+        pass_filenames: false

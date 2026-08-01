@@ -1,0 +1,66 @@
+<div class="p-3 border-bottom bg-body-tertiary">
+    <div class="row g-2">
+        <div class="col-sm-12">
+            <input
+                type="search"
+                class="form-control form-control-sm"
+                data-fuzzy-search="domains"
+                placeholder="Search..."
+                aria-label="Search blocked or allowed domains"
+            >
+        </div>
+    </div>
+</div>
+<div class="table-responsive">
+    <table class="table table-striped mb-0 table-dark">
+        <thead>
+            <tr>
+                <th>Domain</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for domain, v in domains.items() %}
+            <tr
+                class="border-bottom"
+                data-fuzzy-row="domains"
+                data-fuzzy-primary="{{ domain }}"
+                data-fuzzy-searchable="{{ domain }} {{ v.type or 'unknown' }} {{ 'enabled' if v.enabled else 'disabled' }}"
+            >
+                <td><code>{{ domain }}</code></td>
+                <td>{{ 'Blocked' if v.type == 'deny' else 'Allowed' if v.type == 'allow' else 'unknown' }}</td>
+                <td>
+                    <span class="badge {{ 'text-bg-success' if v.enabled else 'text-bg-secondary' }}">
+                        {{ 'enabled' if v.enabled else 'disabled' }}
+                    </span>
+                </td>
+                <td>
+                    {% if v.type == 'deny' %}
+                    <form action="{{ url_for('unblock_domain') }}" method="POST" class="d-inline tab-aware-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="domain" value="{{ domain }}">
+                        <input type="hidden" name="type" value="perm">
+                        <input type="hidden" name="next_tab" value="domains">
+                        <button type="submit" class="btn btn-sm btn-outline-success">Allow</button>
+                    </form>
+                    {% else %}
+                    <form action="{{ url_for('block_domain') }}" method="POST" class="d-inline tab-aware-form">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="domain" value="{{ domain }}">
+                        <input type="hidden" name="type" value="perm">
+                        <input type="hidden" name="next_tab" value="domains">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Block</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" class="text-center py-3">No domains found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

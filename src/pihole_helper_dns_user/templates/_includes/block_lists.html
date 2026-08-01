@@ -1,0 +1,36 @@
+<div class="p-3 border-bottom bg-body-tertiary">
+    <div class="row g-2">
+        <div class="col-md-12">
+            <input
+                type="search"
+                class="form-control form-control-sm"
+                data-fuzzy-search="lists"
+                placeholder="Search..."
+                aria-label="Search block lists"
+            >
+        </div>
+    </div>
+</div>
+<ul class="list-group">
+    {% for lst in ad_lists %}
+    <li
+        class="list-group-item d-flex justify-content-between align-items-center gap-2"
+        data-fuzzy-row="lists"
+        data-fuzzy-primary="{{ lst.comment | default('', true) }}"
+        data-fuzzy-searchable="{{ lst.comment | default('', true) }} {{ 'enabled' if lst.enabled else 'disabled' }}"
+    >
+        <span class="text-truncate" title="{{ lst.comment }}">{{ lst.comment | default('&nbsp;') }}</span>
+        <form action="{{ url_for('toggle_list') }}" method="POST" class="tab-aware-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="list_id" value="{{ lst.id }}">
+            <input type="hidden" name="enable" value="{{ 'False' if lst.enabled else 'True' }}">
+            <input type="hidden" name="next_tab" value="lists">
+            <button type="submit" class="btn btn-sm {{ 'btn-outline-success' if lst.enabled else 'btn-outline-danger' }}">
+                {{ 'Allow' if lst.enabled else 'Block from list' }}
+            </button>
+        </form>
+    </li>
+    {% else %}
+    <li class="list-group-item text-center py-3">No preloaded lists found.</li>
+    {% endfor %}
+</ul>

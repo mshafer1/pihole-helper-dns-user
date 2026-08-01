@@ -1,0 +1,6 @@
+.venv/
+.vscode/
+.env
+__pycache__/
+_env_*
+etc-pihole/
