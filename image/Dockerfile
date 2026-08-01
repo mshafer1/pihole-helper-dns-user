@@ -32,6 +32,8 @@ RUN apk update && apk add --no-cache curl
 
 COPY ./image/health-check.sh /usr/local/bin/health-check.sh
 
+RUN chmod +x /usr/local/bin/health-check.sh
+
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 CMD /usr/local/bin/health-check.sh
 
 COPY --from=COMPILE_LAYER /wheels /wheels
