@@ -9,6 +9,7 @@ Allows:
 
 import copy
 import datetime
+import importlib.metadata
 import threading
 import urllib.parse
 
@@ -156,6 +157,10 @@ class _ServerState:
         with self._lock:
             if self._backend_session is None:
                 self._backend_session = requests.Session()
+                requests_version = importlib.metadata.version("requests")
+                self._backend_session.headers.update(
+                    {"User-Agent": f"Python-requests/{requests_version} (pihole-helper-dns-user)"}
+                )
 
             return self._authenticate_backend_session(self._backend_session)
 
