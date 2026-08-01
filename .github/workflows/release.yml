@@ -25,9 +25,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-      # This step uses the `docker/setup-buildx-action` action to set up Docker Buildx, which is a Docker CLI plugin that extends the capabilities of Docker Build. It provides features such as building multi-platform images, caching, and exporting build results to different formats.
       - name: Set up Docker Buildx
-        uses: docker/buildx-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        uses: docker/setup-buildx-action@v4
 
       - name: Docker metadata
         id: meta
