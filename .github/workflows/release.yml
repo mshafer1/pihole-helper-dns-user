@@ -104,12 +104,10 @@ jobs:
       #     password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Tag image to push
-        needs:
-          - metaPub
         env:
-          IMAGE_TAG: ${{ needs.metaPub.outputs.image-tag }}
+          IMAGE_TAG: ${{ steps.metaPub.outputs.image-tag }}
           IMAGE_NAME: ghcr.io/${{ github.repository }}
-          REGISTRY_IMAGE: ghcr.io/${{ github.repository }}:${{ needs.metaPub.outputs.image-tag }}
+          REGISTRY_IMAGE: ghcr.io/${{ github.repository }}:${{ steps.metaPub.outputs.image-tag }}
         run: |
           # Tag the locally loaded image for the remote destination
           docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${REGISTRY_IMAGE}
