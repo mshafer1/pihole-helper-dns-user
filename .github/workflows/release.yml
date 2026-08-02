@@ -1,6 +1,12 @@
 #
 name: Create and publish a Docker image
 
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 # Configures this workflow to run every time a change is pushed to the branch called `release`.
 on:
   push:
@@ -10,11 +16,11 @@ on:
 # Defines two custom environment variables for the workflow. These are used for the Container registry domain, and a name for the Docker image that this workflow builds.
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 # There is a single job in this workflow. It's configured to run on the latest available version of Ubuntu.
 jobs:
   build-image:
+    name: Build image and store on pipeline
     runs-on: ubuntu-latest
     # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
     permissions:
@@ -35,7 +41,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
-          images: ghcr.io/${IMAGE_NAME}
+          images: ghcr.io/${{ github.repository }}
           tags: type=sha,format=short
 
       - name: Build Docker image
@@ -43,7 +49,7 @@ jobs:
         with:
           context: .
           file: ./image/Dockerfile
-          tags: ${IMAGE_NAME}:${{ steps.meta.outputs.version }}
+          tags: ghcr.io/${{ github.repository }}:${{ steps.meta.outputs.version }}
           outputs: type=docker,dest=/tmp/image.tar
 
       - name: Upload image tarball
@@ -54,15 +60,14 @@ jobs:
           retention-days: 1  # Short retention since it's just for pipeline sharing
 
   push-image:
+    name: Push Docker image to GitHub Container Registry
+    needs: build-image
     runs-on: ubuntu-latest
     # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
     permissions:
-      contents: read
-      packages: write
-      attestations: write
-      id-token: write
-    needs: build-image
-      #
+      packages: write # Needed to publish the Docker image to the GitHub Container Registry
+      attestations: write # Needed to generate and push an attestation for the Docker image
+      id-token: write # Needed to generate an attestation for the Docker image
     steps:
       - name: Download image tarball
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
@@ -85,6 +90,7 @@ jobs:
       - name: Tag and Push to Registry
         env:
           IMAGE_TAG: ${{ needs.build-image.outputs.image-tag }}
+          IMAGE_NAME: ${{ github.repository }}
         run: |
           REGISTRY_IMAGE="ghcr.io/${IMAGE_NAME}:${IMAGE_TAG}"
 
