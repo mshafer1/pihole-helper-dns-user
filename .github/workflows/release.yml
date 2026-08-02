@@ -20,26 +20,9 @@ env:
 
 # There is a single job in this workflow. It's configured to run on the latest available version of Ubuntu.
 jobs:
-  set_build_counter:
-    name: Set build counter
-    runs-on: ubuntu-latest
-    permissions:
-      repositories: write # Needed to read/write the build counter variable in the repository settings.
-    outputs:
-      count: ${{ steps.set-build-counter.outputs.count }}
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          persist-credentials: false
-      - uses: mshafer1/gh-actions/set-build-counter@53b85ede2023c2cb93f8911f007d80c64095444d # v1.0.0
-        id: set-build-counter
-        with:
-          seed: '${{ env.REPO_MAJOR_MINOR }}'
   build-image:
     name: Build image and store on pipeline
     runs-on: ubuntu-latest
-    needs:
-      - set_build_counter
     # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
     permissions:
       contents: read
@@ -64,8 +47,6 @@ jobs:
             type=sha,format=short
             type=ref,event=branch
             type=sha
-            type=semver,pattern=build-{{ env.REPO_MAJOR_MINOR }}.{{ needs.set_build_counter.outputs.count }}
-            type=semver,pattern=build-{{ env.REPO_MAJOR_MINOR }}
 
       - name: Build Docker image
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
