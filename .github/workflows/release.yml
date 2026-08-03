@@ -27,7 +27,7 @@ jobs:
       contents: read
     outputs:
       image-tag: ${{ steps.meta.outputs.version }}
-      image-digest: ${{ steps.meta.outputs.digest }}
+      image-digest: ${{ steps.build.outputs.digest }}
       version: ${{ steps.meta.outputs.version }}
     steps:
       - name: Checkout repository
@@ -49,6 +49,7 @@ jobs:
             type=sha
 
       - name: Build Docker image
+        id: build
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
