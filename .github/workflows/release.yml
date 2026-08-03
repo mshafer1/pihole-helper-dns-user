@@ -45,6 +45,7 @@ jobs:
           tags: |
             type=sha,format=short
             type=ref,event=branch
+            type=semver,pattern=build-0.0.0
             type=sha
 
       - name: Build Docker image
@@ -80,18 +81,6 @@ jobs:
         with:
           name: docker-image-artifact
           path: /tmp
-
-      - name: Docker metadata
-        id: metaPub
-        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
-        with:
-          images: ghcr.io/${{ github.repository }}
-          tags: |
-            type=sha,format=short
-            type=ref,event=branch
-            type=semver,pattern=build-0.0.0
-
-          # TODO: make the semver pattern more dynamic based on the versioning scheme used in the repo. For now, it's hardcoded to build-0.0.0 since this is a placeholder for the actual versioning logic.
 
       - name: Load Docker image
         run: |
