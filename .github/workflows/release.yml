@@ -105,9 +105,9 @@ jobs:
 
       - name: Tag image to push
         env:
-          IMAGE_TAG: ${{ steps.metaPub.outputs.image-tag }}
+          IMAGE_TAG: ${{ steps.metaPub.outputs.version }}
           IMAGE_NAME: ghcr.io/${{ github.repository }}
-          REGISTRY_IMAGE: ghcr.io/${{ github.repository }}:${{ steps.metaPub.outputs.image-tag }}
+          REGISTRY_IMAGE: ghcr.io/${{ github.repository }}:${{ steps.metaPub.outputs.version }}
         run: |
           # Tag the locally loaded image for the remote destination
           docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${REGISTRY_IMAGE}
