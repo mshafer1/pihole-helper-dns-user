@@ -19,4 +19,4 @@ jobs:
     name: Run Check Actions
     uses: ./.github/workflows/check_actions.yml
     permissions:
-      security-events: write # Needed to generate and security alerts for actions in this repo.
+      security-events: write # Needed to upload code-scanning (SARIF) results for actions in this repo.

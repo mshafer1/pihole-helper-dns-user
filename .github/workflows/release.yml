@@ -53,7 +53,10 @@ jobs:
         with:
           context: .
           file: ./image/Dockerfile
-          tags: ghcr.io/${{ github.repository }}:latest, ghcr.io/${{ github.repository }}:${{ steps.meta.outputs.version }}, ${{ steps.meta.outputs.tags }}
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ steps.meta.outputs.version }}
+            ${{ steps.meta.outputs.tags }}
           outputs: type=docker,dest=/tmp/image.tar
 
       - name: Upload image tarball
@@ -117,6 +120,6 @@ jobs:
         uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
         if: startsWith(github.ref, 'refs/heads/releases/')
         with:
-          subject-name: ${REGISTRY}/${IMAGE_NAME}
-          subject-digest: ${{ steps.meta.outputs.digest }}
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository }}
+          subject-digest: ${{ needs.build-image.outputs.image-digest }}
           push-to-registry: true

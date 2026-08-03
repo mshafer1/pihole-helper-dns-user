@@ -15,7 +15,7 @@ jobs:
     name: Run zizmor
     runs-on: ubuntu-latest
     permissions:
-      security-events: write # Needed to generate and security alerts for actions in this repo.
+      security-events: write # Needed to upload code-scanning (SARIF) results for actions in this repo.
     steps:
       - name: Check out repo
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
