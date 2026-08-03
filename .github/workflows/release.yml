@@ -53,7 +53,7 @@ jobs:
         with:
           context: .
           file: ./image/Dockerfile
-          tags: ghcr.io/${{ github.repository }}:${{ steps.meta.outputs.version }}
+          tags: ghcr.io/${{ github.repository }}:latest, ghcr.io/${{ github.repository }}:${{ steps.meta.outputs.version }}, ${{ steps.meta.outputs.tags }}
           outputs: type=docker,dest=/tmp/image.tar
 
       - name: Upload image tarball
@@ -103,18 +103,18 @@ jobs:
       #     username: ${{ github.actor }}
       #     password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Tag image to push
-        env:
-          IMAGE_TAG: ${{ steps.metaPub.outputs.version }}
-          IMAGE_NAME: ghcr.io/${{ github.repository }}
-          REGISTRY_IMAGE: ghcr.io/${{ github.repository }}:${{ steps.metaPub.outputs.version }}
-        run: |
-          # Tag the locally loaded image for the remote destination
-          docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${REGISTRY_IMAGE}
-          docker image ls -a
+      # - name: Tag image to push
+      #   env:
+      #     IMAGE_TAG: ${{ steps.metaPub.outputs.version }}
+      #     IMAGE_NAME: ghcr.io/${{ github.repository }}
+      #     REGISTRY_IMAGE: ghcr.io/${{ github.repository }}:${{ steps.metaPub.outputs.version }}
+      #   run: |
+      #     # Tag the locally loaded image for the remote destination
+      #     docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${REGISTRY_IMAGE}
+      #     docker image ls -a
 
-          # Push to the remote registry
-          echo would docker push ${REGISTRY_IMAGE}
+      #     # Push to the remote registry
+      #     echo would docker push ${REGISTRY_IMAGE}
 
       # TODO: enable after testing
       # - name: Generate artifact attestation
