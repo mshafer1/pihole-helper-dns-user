@@ -106,7 +106,7 @@ jobs:
 
       - name: Push image to the Container registry
         if: startsWith(github.ref, 'refs/heads/releases/')
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           build: false
           push: true
