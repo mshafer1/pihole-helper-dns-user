@@ -103,7 +103,7 @@ jobs:
           set -euo pipefail
           docker push --all-tags "$REMOTE_IMAGE" 2>&1 | tee push_output.log
           push_output="$(cat push_output.log)"
-          digest="$(printf '%s\n' "$push_output" | awk '/digest: sha256:/ {print $2; exit}')"
+          digest="$(printf '%s\n' "$push_output" | grep 'digest: sha256' | cut -d' ' -f3)"
           if [[ -z "$digest" ]]; then
             echo "Failed to determine pushed image digest" >&2
             exit 1
