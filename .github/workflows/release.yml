@@ -7,11 +7,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# Configures this workflow to run every time a change is pushed to the branch called `release`.
+# Configures this workflow to run when a GitHub Release is published.
 on:
-  push:
-    branches: ['releases/*']
-  workflow_dispatch:
+  release:
+    types: [published]
 
 # Define the registry to push to as an env var.
 env:
@@ -42,10 +41,8 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
+            type=raw,value=${{ github.event.release.tag_name }}
             type=sha,format=short
-            type=ref,event=branch
-            type=semver,pattern=build-0.0.0
-            type=sha
 
       - name: Build Docker image
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
@@ -88,7 +85,6 @@ jobs:
       # Uses the `docker/login-action` action to log in to the Container registry registry using the account and password that will publish the packages. Once published, the packages are scoped to the account defined here.
       - name: Log in to the Container registry
         uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
-        if: startsWith(github.ref, 'refs/heads/releases/')
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -96,7 +92,6 @@ jobs:
 
       - name: Push Docker image
         id: push
-        if: startsWith(github.ref, 'refs/heads/releases/')
         env:
           REMOTE_IMAGE: ${{ env.REGISTRY }}/${{ github.repository }}
         run: |
@@ -112,7 +107,6 @@ jobs:
 
       - name: Generate artifact attestation
         uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
-        if: startsWith(github.ref, 'refs/heads/releases/')
         with:
           subject-name: ${{ env.REGISTRY }}/${{ github.repository }}
           subject-digest: ${{ steps.push.outputs.digest }}
