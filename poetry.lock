@@ -214,15 +214,23 @@ redis = ["redis (>=2.10.5)"]
 
 [[package]]
 name = "cachelib"
-version = "0.14.0"
+version = "0.15.2"
 description = "A collection of cache libraries in the same API interface."
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.11"
 groups = ["main"]
 files = [
-    {file = "cachelib-0.14.0-py3-none-any.whl", hash = "sha256:4671000b032baa8fac47ad19850f4f522785cee764b4e04c5cfe8955a18d67de"},
-    {file = "cachelib-0.14.0.tar.gz", hash = "sha256:73fedcadd0ba818fb2bb9f3c7cd5fcc2a71e86286f1842f55f28d500faee17f1"},
+    {file = "cachelib-0.15.2-py3-none-any.whl", hash = "sha256:618d8df297cf63b36529129f70c84bfc0ce522dc2cfb24a152b1ac73fa54f9b6"},
+    {file = "cachelib-0.15.2.tar.gz", hash = "sha256:41adb53d11594b1a9874789dc0fdbc83e63d3d7c0d9de54faea026008aa75d32"},
 ]
+
+[package.extras]
+dynamodb = ["boto3 (>=1.43.4)"]
+memcached = ["pylibmc (>=1.6.3)"]
+mongodb = ["pymongo (>=4.11)"]
+redis = ["redis (>=6.0.0)"]
+uwsgi = ["uwsgi (>=2.0.28)"]
+valkey = ["valkey (>=6.1.0)"]
 
 [[package]]
 name = "certifi"
@@ -2343,4 +2351,4 @@ testing = ["coverage[toml]", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4"
-content-hash = "5cb6ce3bd03fe3c417addc50e95b1e2f832f36ccc518e27db2eca5c918357776"
+content-hash = "4e3235acd655bad97fd00526f0a5017763afd26d6926f914c951070ac0d73820"
