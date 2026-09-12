@@ -124,6 +124,7 @@ jobs:
           GIT_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
+          short_ref="${GIT_SHA:0:7}"
           if [[ "${RELEASE_TAG}" == "manual" ]]; then
             echo "Skipping latest tag for manual release tag"
           else
@@ -132,6 +133,8 @@ jobs:
           fi
           docker push "$REMOTE_IMAGE:${RELEASE_TAG}-amd64"
           docker push "$REMOTE_IMAGE:${RELEASE_TAG}-arm64"
+          docker push "$REMOTE_IMAGE:${short_ref}-amd64"
+          docker push "$REMOTE_IMAGE:${short_ref}-arm64"
           docker push "$REMOTE_IMAGE:${GIT_SHA}-amd64"
           docker push "$REMOTE_IMAGE:${GIT_SHA}-arm64"
 
@@ -143,7 +146,8 @@ jobs:
           GIT_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          refs=("$RELEASE_TAG" "$GIT_SHA")
+          short_ref="${GIT_SHA:0:7}"
+          refs=("$RELEASE_TAG" "$short_ref" "$GIT_SHA")
           [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]] || refs+=(latest)
           for ref in "${refs[@]}"; do
             docker manifest create "$REMOTE_IMAGE:$ref" \
