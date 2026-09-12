@@ -1,0 +1,5 @@
+[allowlist]
+description = "Global allowlisted files or paths"
+paths = [
+    '''^.env.example$'''
+]
