@@ -23,6 +23,6 @@ repos:
           --rm
           -v $(pwd):/src
           ghcr.io/betterleaks/betterleaks:latest
-          git /src'
+          git /src -v'
         language: system
         pass_filenames: false
