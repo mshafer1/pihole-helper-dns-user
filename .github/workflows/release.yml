@@ -147,7 +147,7 @@ jobs:
         run: |
           set -euo pipefail
           short_ref="${GIT_SHA:0:7}"
-          refs=("$RELEASE_TAG" "$short_ref" "$GIT_SHA")
+          refs=("$RELEASE_TAG" "sha-${short_ref}" "$GIT_SHA")
           [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]] || refs+=(latest)
           for ref in "${refs[@]}"; do
             docker manifest create "$REMOTE_IMAGE:$ref" \
