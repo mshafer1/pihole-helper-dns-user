@@ -143,7 +143,9 @@ jobs:
           GIT_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          for ref in latest "$RELEASE_TAG" "$GIT_SHA"; do
+          refs=("$RELEASE_TAG" "$GIT_SHA")
+          [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]] || refs+=(latest)
+          for ref in "${refs[@]}"; do
             docker manifest create "$REMOTE_IMAGE:$ref" \
               --amend "$REMOTE_IMAGE:${ref}-amd64" \
               --amend "$REMOTE_IMAGE:${ref}-arm64"
