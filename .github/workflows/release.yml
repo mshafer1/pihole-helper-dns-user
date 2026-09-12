@@ -133,8 +133,8 @@ jobs:
           fi
           docker push "$REMOTE_IMAGE:${RELEASE_TAG}-amd64"
           docker push "$REMOTE_IMAGE:${RELEASE_TAG}-arm64"
-          docker push "$REMOTE_IMAGE:${short_ref}-amd64"
-          docker push "$REMOTE_IMAGE:${short_ref}-arm64"
+          docker push "$REMOTE_IMAGE:sha-${short_ref}-amd64"
+          docker push "$REMOTE_IMAGE:sha-${short_ref}-arm64"
           docker push "$REMOTE_IMAGE:${GIT_SHA}-amd64"
           docker push "$REMOTE_IMAGE:${GIT_SHA}-arm64"
 
