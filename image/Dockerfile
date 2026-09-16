@@ -1,4 +1,4 @@
-FROM python:3.14.7-alpine3.23@sha256:6b8f06d04d5305c1d1288435388df9165ab41e681fae6439d6349d8053cc3f83 AS poetry_installed
+FROM python:3.14.7-alpine3.23@sha256:8caa2adfeb414dfe68d8b257f7aea9e205a400521c2b13b2d2e5e731fb8e70e5 AS poetry_installed
 
 RUN apk update && apk add --no-cache curl
 
@@ -10,7 +10,7 @@ COPY ./pyproject.toml ./poetry.lock ./
 
 RUN poetry export -o requirements.txt
 
-FROM python:3.14.7-alpine3.23@sha256:6b8f06d04d5305c1d1288435388df9165ab41e681fae6439d6349d8053cc3f83 AS COMPILE_LAYER
+FROM python:3.14.7-alpine3.23@sha256:8caa2adfeb414dfe68d8b257f7aea9e205a400521c2b13b2d2e5e731fb8e70e5 AS COMPILE_LAYER
 
 RUN apk update && apk add --no-cache curl
 
@@ -22,7 +22,7 @@ RUN python3 -m pip install -r requirements.txt
 
 RUN pip wheel -w /wheels -r requirements.txt
 
-FROM python:3.14.7-alpine3.23@sha256:6b8f06d04d5305c1d1288435388df9165ab41e681fae6439d6349d8053cc3f83 AS app
+FROM python:3.14.7-alpine3.23@sha256:8caa2adfeb414dfe68d8b257f7aea9e205a400521c2b13b2d2e5e731fb8e70e5 AS app
 
 RUN apk update && apk add --no-cache curl
 
