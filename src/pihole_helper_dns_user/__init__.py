@@ -94,7 +94,7 @@ class _ServerState:
             }
             return
 
-        queries_response = self.pihole_api_request("/queries", params={}) or {}
+        queries_response = self.pihole_api_request("/queries", params={"length": 1_000}) or {}
         queries = []
         if "queries" in queries_response:
             for entry in queries_response["queries"]:
