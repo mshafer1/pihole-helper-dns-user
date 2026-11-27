@@ -112,6 +112,10 @@
             });
         }
 
+        function setPageLink(anchor) {
+           history.pushState({ tab: anchor }, '', `${anchor}`);
+        }
+
         window.addEventListener("DOMContentLoaded", removeAlerts);
     </script>
 </head>
@@ -130,16 +134,19 @@
                             <li class="nav-item">
                                 <a class="nav-link fw-bold active" href="#queries" data-tab-target="queries"
                                     data-bs-toggle="tab" role="tab" aria-controls="queries" aria-selected="true"
+                                    onclick="setPageLink('#queries')"
                                     id="queries-tab">Queries</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link fw-bold" href="#domains" data-tab-target="domains"
                                     data-bs-toggle="tab" role="tab" aria-controls="domains" aria-selected="false"
+                                    onclick="setPageLink('#domains')"
                                     id="domains-tab">Blocked/Allowed Domains</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link fw-bold" href="#lists" data-tab-target="lists" data-bs-toggle="tab"
-                                    role="tab" aria-controls="lists" aria-selected="false" id="lists-tab">Block
+                                    role="tab" aria-controls="lists" aria-selected="false" onclick="setPageLink('#lists')"
+                                    id="lists-tab">Block
                                     Lists</a>
                             </li>
                             <li class="nav-item fw-bold ms-lg-auto mb-2 px-4">
