@@ -453,7 +453,7 @@ def _quote_url(url):
 scheduler.add_job(
     func=pihole_session_refresh,
     trigger="cron",
-    minute="*/5",  # todo; 20 minutes is probably better, but for testing purposes, 5 minutes is good
+    minute="*/20",
     args=[],
     id="pihole_session_refresh",
     replace_existing=True,
