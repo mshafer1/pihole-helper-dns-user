@@ -272,7 +272,7 @@ def home():
 
     return flask.render_template(
         "index.html",
-        queries=state.queries[:20],
+        queries=state.queries[:1_000_000],
         ad_lists=list(state.lists.values()),
         domains=state.domains,
     )
