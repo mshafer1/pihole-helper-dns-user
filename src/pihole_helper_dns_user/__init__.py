@@ -113,7 +113,9 @@ class _ServerState:
         domains = {}
         domain_response = self.pihole_api_request("domains") or {}
         if "domains" in domain_response:
-            for entry in domain_response["domains"]:
+            for entry in sorted(
+                domain_response["domains"], key=lambda x: x.get("domain", "").lower()
+            ):
                 domains[entry.get("domain")] = {
                     "enabled": entry.get("enabled"),
                     "type": entry.get("type"),
