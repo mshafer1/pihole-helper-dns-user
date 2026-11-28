@@ -94,7 +94,7 @@ class _ServerState:
             }
             return
 
-        queries_response = self.pihole_api_request("/queries", params={}) or {}
+        queries_response = self.pihole_api_request("/queries", params={"length": 1_000}) or {}
         queries = []
         if "queries" in queries_response:
             for entry in queries_response["queries"]:
@@ -113,7 +113,9 @@ class _ServerState:
         domains = {}
         domain_response = self.pihole_api_request("domains") or {}
         if "domains" in domain_response:
-            for entry in domain_response["domains"]:
+            for entry in sorted(
+                domain_response["domains"], key=lambda x: x.get("domain", "").lower()
+            ):
                 domains[entry.get("domain")] = {
                     "enabled": entry.get("enabled"),
                     "type": entry.get("type"),
@@ -272,7 +274,7 @@ def home():
 
     return flask.render_template(
         "index.html",
-        queries=state.queries[:20],
+        queries=state.queries[:1_000_000],
         ad_lists=list(state.lists.values()),
         domains=state.domains,
     )
@@ -453,7 +455,7 @@ def _quote_url(url):
 scheduler.add_job(
     func=pihole_session_refresh,
     trigger="cron",
-    minute="*/5",  # todo; 20 minutes is probably better, but for testing purposes, 5 minutes is good
+    minute="*/20",
     args=[],
     id="pihole_session_refresh",
     replace_existing=True,
