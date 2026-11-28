@@ -21,7 +21,7 @@
             </tr>
         </thead>
         <tbody>
-            {% for domain, v in domains.items() if v.enabled %}
+            {% for domain, v in domains.items() %}
             <tr
                 class="border-bottom"
                 data-fuzzy-row="domains"
@@ -30,8 +30,8 @@
             >
                 <td><code>{{ domain }}</code></td>
                 <td>
-                    <span class="badge {{ 'text-bg-success' if v.type == 'allow' else 'text-bg-danger' }}">
-                        {{ 'Blocked' if v.type == 'deny' else 'Allowed' if v.type == 'allow' else 'unknown' }}
+                    <span class="badge {{ ('text-bg-success' if v.type == 'allow' else 'text-bg-danger') if v.enabled else 'text-bg-secondary' }}">
+                        {{ ('Would be ' if not v.enabled else '') + ('Blocked' if v.type == 'deny' else 'Allowed') }}
                     </span>
                 </td>
                 <td>
